@@ -3,5 +3,5 @@ pkmbta/
 __pycache__/
 build/
 dist/
-pokeicn.icns/
-PKMBTA.spec/
+pokeicn.icns
+PKMBTA.spec
