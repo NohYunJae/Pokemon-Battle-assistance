@@ -1,2 +1,6 @@
 pkmbta/
 .venv/
+__pycache__/
+build/
+dist/
+pokeicn.icns/
