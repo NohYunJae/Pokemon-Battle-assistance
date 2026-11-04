@@ -105,7 +105,7 @@ class BTAssistanceApp(ctk.CTk):
         self.battle_view = BattleView(self.tab_battle)
         self.optimizer_view = OptimizerView(self.tab_optimizer)
 
-        self._select_tab("sample")
+        self._select_tab("calculator")
 
     def _select_tab(self, selected_key):
         for key, btn in self.tab_buttons.items():
