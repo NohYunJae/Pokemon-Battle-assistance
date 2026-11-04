@@ -145,7 +145,7 @@ class TeamAnalyzer:
         # 모든 타입 리스트 (type_chart의 키 기준)
         all_types = list(type_chart.keys())
         
-        # 조건에 맞는 방어 타입 조합 도출 (약점을 못 찌르며, 1배라도 결정력 4만 이상인 기술이 없는 경우)
+        # 파훼 불가능한 방어 타입 조합을 찾기 위한 로직
         unweakened_combinations = []
         checked_combinations = set()
 
@@ -162,19 +162,21 @@ class TeamAnalyzer:
                         if self._is_completely_unweakened(comb, all_party_moves):
                             unweakened_combinations.append(comb)
 
-        print("\n[🛡️ 경고: 파티의 기술로 약점을 못 찌르며, 1배 타격 시에도 결정력 4만 이상을 내지 못하는 방어 타입 조합]")
+        print("\n[파티의 기술로 약점을 못 찌르며, 결정력 4만 이상을 내지 못하는 방어 타입 조합]")
         print("(이 방어 타입을 가진 상대 앞에서는 고화력 1배 타격이나 약점 찌르기가 모두 불가능하여 돌파하기 매우 까다롭습니다)")
         if unweakened_combinations:
             for def_combo in unweakened_combinations:
-                print(f"  - {'/'.join(def_combo)} 타입 조합")
+                print(f"  - {'/'.join(def_combo)}")
         else:
             print("  - 없음 (모든 방어 타입 조합에 대해 약점을 찌르거나 1배로 4만 이상의 결정력을 낼 수 있는 기술이 존재합니다)")
 
+        return unweakened_combinations
+    
     def _is_completely_unweakened(self, def_combo, all_party_moves):
         """
         주어진 방어 타입 조합(def_combo)에 대해, 파티의 모든 기술(주력기+보조기) 중
         1. 약점(2배 이상)을 찌르는 기술이 있거나,
-        2. 1배 이상(1.0 이상 2.0 미만)이면서 결정력(dmg_output)이 43,000 이상인 기술이
+        2. 1배 이상이면서 결정력(dmg_output)이 43,000 이상인 기술이
         단 하나라도 존재하면 대처 가능하다고 판단하여 False를 반환합니다.
         어떤 기술도 위 조건을 만족하지 못할 때만 True(대처 불가)를 반환합니다.
         """
@@ -187,10 +189,10 @@ class TeamAnalyzer:
             mult = self._get_type_multiplier(atk_type, def_combo)
 
             # 조건 1: 약점을 찌르는 경우 (2배 이상)
-            if mult >= 2.0 and dmg > 26000:
+            if mult >= 2.0 and dmg > 26500:
                 return False
             
-            # 조건 2: 1배 결정력이 45,000 이상인 경우
+            # 조건 2: 1배 결정력이 43,000 이상인 경우
             if mult == 1.0 and dmg >= 43000:
                 return False
         
@@ -222,7 +224,6 @@ class TeamAnalyzer:
                 if mult >= 2.0:
                     weakness_counts[atk_type] = weakness_counts.get(atk_type, 0) + 1
                 
-                # 반감하지 못하는지 체크 (1배 이상인 경우, 즉 반감 0.5/0.25나 무효 0이 아닌 경우)
                 if mult >= 1.0:
                     not_resisted_counts[atk_type] = not_resisted_counts.get(atk_type, 0) + 1
 
@@ -243,6 +244,8 @@ class TeamAnalyzer:
                 print(f"🛡️ {atk_type} 타입 공격: 파티 내 {count}마리가 반감하지 못함(1배 이상 데미지) (기준 초과)")
         else:
             print("- 파티원 절반 초과가 반감하지 못하는 타입이 없습니다.")
+
+        return common_weaknesses, common_not_resisted
 
 
 if __name__ == "__main__":
