@@ -74,6 +74,9 @@ class Power_modifiers:
         elif self.pkm.ability == "철주먹" and self.move.name in IRON_FIST_MOVES:
             ability_mod = 1.2
 
+        elif self.pkm.ability == "천하장사" and self.move.category == "물리":
+            ability_mod = 2
+
         else:
             ability_mod = 1
 
