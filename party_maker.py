@@ -201,12 +201,12 @@ class TeamAnalyzer:
         print("\n=== [파티 방어 상성 및 공통 약점 분석] ===")
 
         total_party_size = len(self.party)
-        threshold = total_party_size / 2  # 절반 기준 (예: 6마리 중 3마리 초과인 4마리 이상)
+        threshold = total_party_size / 2
 
         all_attack_types = list(type_chart.keys())
         
-        weakness_counts = {}      # 약점(2배 이상)을 찔리는 파티원 수 집계
-        not_resisted_counts = {}  # 반감하지 못하는(1배 이상, 즉 반감/무효가 아닌) 파티원 수 집계
+        weakness_counts = {}
+        not_resisted_counts = {} 
 
         print(f"• 파티원 수: {total_party_size}마리 (공통 취약 기준: {threshold}마리 초과)\n")
 
