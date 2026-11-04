@@ -10,6 +10,7 @@ from .utils.cache_manager import GameDataCache
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 SAMPLES_DIR = os.path.join(DATA_DIR, "samples")
+FONT_FAMILY = "Malgun Gothic"
 
 class StdoutRedirector:
     def __init__(self, text_widget):
@@ -61,7 +62,6 @@ class OptimizerView:
             return ["기본샘플"]
 
     def refresh_samples(self):
-        """샘플 파일 목록을 다시 불러와 모든 관련 콤보박스를 갱신합니다."""
         self.sample_files = self._get_sample_file_list()
         combo_attrs = ['speed_pkm1', 'speed_pkm2', 'power_pkm1', 'power_pkm2', 'bulk_pkm1', 'bulk_pkm2', 'regen_target_combo']
         for attr in combo_attrs:
@@ -100,7 +100,7 @@ class OptimizerView:
 
         title_ribbon = ctk.CTkFrame(main_card, fg_color="#FFFFFF", corner_radius=8, border_width=1.5, border_color="#000000", height=30)
         title_ribbon.pack(anchor="w", padx=12, pady=(8, 4))
-        ctk.CTkLabel(title_ribbon, text="포켓몬 스탯 최적화 툴", text_color="#000000", font=ctk.CTkFont(family="Arial", size=14, weight="bold")).pack(side="left", padx=10, pady=2)
+        ctk.CTkLabel(title_ribbon, text="포켓몬 스탯 최적화 툴", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold")).pack(side="left", padx=10, pady=2)
 
         split_container = ctk.CTkFrame(main_card, fg_color="transparent")
         split_container.pack(fill="both", expand=True, padx=8, pady=4)
@@ -123,25 +123,25 @@ class OptimizerView:
         right_frame = ctk.CTkFrame(split_container, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         right_frame.pack(side="right", fill="both", expand=True, padx=(4, 0), pady=2)
 
-        ctk.CTkLabel(right_frame, text="[최적화 결과 리포트]", text_color="#000000", font=ctk.CTkFont(family="Arial", size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
+        ctk.CTkLabel(right_frame, text="[최적화 결과 리포트]", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
         
         self.result_box = ctk.CTkTextbox(
             right_frame, fg_color="#ffffff", text_color="#000000", corner_radius=8, 
-            border_width=1, border_color="#000000", font=("Arial", 11)
+            border_width=1, border_color="#000000", font=(FONT_FAMILY, 11)
         )
         self.result_box.pack(fill="both", expand=True, padx=8, pady=(0, 4))
 
         regen_frame = ctk.CTkFrame(right_frame, fg_color="#D1E9FF", corner_radius=8, border_width=1, border_color="#000000")
         regen_frame.pack(fill="x", padx=8, pady=(0, 8))
 
-        ctk.CTkLabel(regen_frame, text="스탯 포인트(SP) 설정 및 샘플 재생성", text_color="#000000", font=ctk.CTkFont(size=11, weight="bold")).pack(anchor="w", padx=8, pady=(4, 2))
+        ctk.CTkLabel(regen_frame, text="스탯 포인트(SP) 설정 및 샘플 재생성", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold")).pack(anchor="w", padx=8, pady=(4, 2))
 
         select_grid = ctk.CTkFrame(regen_frame, fg_color="transparent")
         select_grid.pack(fill="x", padx=8, pady=2)
         select_grid.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(select_grid, text="최적화 결과 선택:", text_color="#000000", font=ctk.CTkFont(size=10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=2)
-        self.result_select_combo = ctk.CTkComboBox(select_grid, values=["무보정 (SP = 0)", "남은 스탯 전부 투자"], height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", command=self.on_result_option_selected)
+        ctk.CTkLabel(select_grid, text="최적화 결과 선택:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=2)
+        self.result_select_combo = ctk.CTkComboBox(select_grid, values=["무보정 (SP = 0)", "남은 스탯 전부 투자"], height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", command=self.on_result_option_selected, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.result_select_combo.grid(row=0, column=1, sticky="ew", pady=2)
 
         manual_sp_grid = ctk.CTkFrame(regen_frame, fg_color="transparent")
@@ -154,8 +154,8 @@ class OptimizerView:
             manual_sp_grid.grid_columnconfigure(i*2, weight=0)
             manual_sp_grid.grid_columnconfigure(i*2+1, weight=1)
             
-            ctk.CTkLabel(manual_sp_grid, text=f"{stat}:", text_color="#000000", font=ctk.CTkFont(size=10, weight="bold")).grid(row=0, column=i*2, sticky="e", padx=(2, 2), pady=2)
-            entry = ctk.CTkEntry(manual_sp_grid, width=32, height=22, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000")
+            ctk.CTkLabel(manual_sp_grid, text=f"{stat}:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold")).grid(row=0, column=i*2, sticky="e", padx=(2, 2), pady=2)
+            entry = ctk.CTkEntry(manual_sp_grid, width=32, height=22, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
             entry.grid(row=0, column=i*2+1, sticky="ew", padx=(0, 4), pady=2)
             entry.insert(0, "0")
             self.manual_sp_entries[stat] = entry
@@ -165,20 +165,20 @@ class OptimizerView:
         regen_grid.grid_columnconfigure(1, weight=1)
         regen_grid.grid_columnconfigure(2, weight=0)
 
-        ctk.CTkLabel(regen_grid, text="대상 샘플:", text_color="#000000", font=ctk.CTkFont(size=10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=2)
-        self.regen_target_combo = ctk.CTkComboBox(regen_grid, values=self.sample_files, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000")
+        ctk.CTkLabel(regen_grid, text="대상 샘플:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=2)
+        self.regen_target_combo = ctk.CTkComboBox(regen_grid, values=self.sample_files, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.regen_target_combo.grid(row=0, column=1, sticky="ew", pady=2)
         if self.sample_files: self.regen_target_combo.set(self.sample_files[0])
 
-        refresh_btn = ctk.CTkButton(regen_grid, text="목록 갱신", width=80, height=24, fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(size=10, weight="bold"), command=self.refresh_samples)
+        refresh_btn = ctk.CTkButton(regen_grid, text="목록 갱신", width=80, height=24, fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"), command=self.refresh_samples)
         refresh_btn.grid(row=0, column=2, padx=(4, 0), pady=2)
 
-        ctk.CTkLabel(regen_grid, text="저장 파일명:", text_color="#000000", font=ctk.CTkFont(size=10)).grid(row=1, column=0, sticky="w", padx=(0, 4), pady=2)
-        self.regen_filename_entry = ctk.CTkEntry(regen_grid, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000")
+        ctk.CTkLabel(regen_grid, text="저장 파일명:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10)).grid(row=1, column=0, sticky="w", padx=(0, 4), pady=2)
+        self.regen_filename_entry = ctk.CTkEntry(regen_grid, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.regen_filename_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=2)
         self.regen_filename_entry.insert(0, "[opt]파일명")
 
-        regen_btn = ctk.CTkButton(regen_frame, text="샘플 재생성/저장", fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", font=ctk.CTkFont(size=11, weight="bold"), height=26, command=self.regenerate_sample_file)
+        regen_btn = ctk.CTkButton(regen_frame, text="샘플 재생성/저장", fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), height=26, command=self.regenerate_sample_file)
         regen_btn.pack(fill="x", padx=8, pady=(2, 8))
 
     def _init_default_choices(self):
@@ -193,41 +193,40 @@ class OptimizerView:
         scroll_f.pack(fill="both", expand=True, padx=2, pady=2)
         scroll_f.grid_columnconfigure(1, weight=1)
 
-        # 속도 최적화 탭 상단 목록 갱신 버튼
-        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(size=11, weight="bold"), height=26, command=self.refresh_samples)
+        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), height=26, command=self.refresh_samples)
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
-        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_pkm1.grid(row=1, column=1, sticky="ew", pady=4)
         if self.sample_files: self.speed_pkm1.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_pkm2.grid(row=2, column=1, sticky="ew", pady=4)
         if self.sample_files: self.speed_pkm2.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_sp_av.grid(row=3, column=1, sticky="ew", pady=4)
         self.speed_sp_av.insert(0, "32")
 
-        ctk.CTkLabel(scroll_f, text="성격 보정:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_nature = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="성격 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_nature = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_nature.grid(row=4, column=1, sticky="ew", pady=4)
         self.speed_nature.set("1.0")
 
-        ctk.CTkLabel(scroll_f, text="스피드 랭크:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_rank = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="스피드 랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_rank = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_rank.grid(row=5, column=1, sticky="ew", pady=4)
         self.speed_rank.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="아이템 보정:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_item = ctk.CTkComboBox(scroll_f, values=["0", "1 (스카프 등 1.5배)"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="아이템 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=4, padx=(2, 8))
+        self.speed_item = ctk.CTkComboBox(scroll_f, values=["0", "1 (스카프 등 1.5배)"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_item.grid(row=6, column=1, sticky="ew", pady=4)
         self.speed_item.set("0")
 
-        btn = ctk.CTkButton(scroll_f, text="속도 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(weight="bold", size=11), height=32, command=self.run_speed_optimization)
+        btn = ctk.CTkButton(scroll_f, text="속도 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_speed_optimization)
         btn.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(15, 5), padx=2)
 
     def setup_power_tab(self, parent):
@@ -235,33 +234,32 @@ class OptimizerView:
         scroll_f.pack(fill="both", expand=True, padx=2, pady=2)
         scroll_f.grid_columnconfigure(1, weight=1)
 
-        # 결정력 최적화 탭 상단 목록 갱신 버튼
-        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(size=11, weight="bold"), height=26, command=self.refresh_samples)
+        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), height=26, command=self.refresh_samples)
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
-        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_power_moves())
+        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_power_moves(), font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_pkm1.grid(row=1, column=1, sticky="ew", pady=3)
         if self.sample_files: self.power_pkm1.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_pkm2.grid(row=2, column=1, sticky="ew", pady=3)
         if self.sample_files: self.power_pkm2.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="기술 선택:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="기술 선택:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
         
         power_move_frame = ctk.CTkFrame(scroll_f, fg_color="transparent")
         power_move_frame.grid(row=3, column=1, sticky="ew", pady=3)
         power_move_frame.grid_columnconfigure(0, weight=1)
 
-        self.power_move_input = ctk.CTkComboBox(power_move_frame, values=["기술을 선택하세요"], width=100, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        self.power_move_input = ctk.CTkComboBox(power_move_frame, values=["기술을 선택하세요"], width=100, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_move_input.pack(side="left", fill="x", expand=True, padx=(0, 2))
 
-        add_power_btn = ctk.CTkButton(power_move_frame, text="추가", width=40, height=26, fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", command=self.add_power_skill)
+        add_power_btn = ctk.CTkButton(power_move_frame, text="추가", width=40, height=26, fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", command=self.add_power_skill, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         add_power_btn.pack(side="right")
 
-        ctk.CTkLabel(scroll_f, text="선택된 기술:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="선택된 기술:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
         
         self.power_tags_container = ctk.CTkScrollableFrame(scroll_f, orientation="horizontal", fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=6, height=50)
         self.power_tags_container.grid(row=4, column=1, sticky="ew", pady=3)
@@ -269,57 +267,57 @@ class OptimizerView:
         self.power_tags_frame = ctk.CTkFrame(self.power_tags_container, fg_color="transparent")
         self.power_tags_frame.pack(side="left", anchor="w")
 
-        ctk.CTkLabel(scroll_f, text="공격 성격 보정:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_nature = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="공격 성격 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_nature = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_nature.grid(row=5, column=1, sticky="ew", pady=3)
         self.power_nature.set("1.0")
 
-        ctk.CTkLabel(scroll_f, text="공격 랭크:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_rank_a = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="공격 랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_rank_a = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_rank_a.grid(row=6, column=1, sticky="ew", pady=3)
         self.power_rank_a.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="상대 방어 랭크:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=7, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_rank_b = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="상대 방어 랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=7, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_rank_b = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_rank_b.grid(row=7, column=1, sticky="ew", pady=3)
         self.power_rank_b.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="상대 현재 체력(%):", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=8, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_current_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="상대 현재 체력(%):", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=8, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_current_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_current_hp.grid(row=8, column=1, sticky="ew", pady=3)
         self.power_current_hp.insert(0, "100")
 
-        ctk.CTkLabel(scroll_f, text="타수 (다중 공격시 1):", font=ctk.CTkFont(size=10, weight="bold"), text_color="#000000").grid(row=9, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_hits = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="타수 (다중 공격시 1):", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"), text_color="#000000").grid(row=9, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_hits = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_hits.grid(row=9, column=1, sticky="ew", pady=3)
         self.power_hits.insert(0, "1")
 
-        ctk.CTkLabel(scroll_f, text="목표 기절 확률(%):", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=10, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_target_prob = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="목표 기절 확률(%):", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=10, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_target_prob = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_target_prob.grid(row=10, column=1, sticky="ew", pady=3)
         self.power_target_prob.insert(0, "100")
 
-        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_weather.grid(row=11, column=1, sticky="ew", pady=3)
         self.power_weather.set("")
 
-        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_field.grid(row=12, column=1, sticky="ew", pady=3)
         self.power_field.set("")
 
-        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_sp_av.grid(row=13, column=1, sticky="ew", pady=3)
         self.power_sp_av.insert(0, "32")
 
-        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_crit_var = ctk.BooleanVar(value=False)
-        self.power_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.power_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(size=11))
+        self.power_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.power_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_crit_chk.grid(row=14, column=1, sticky="w", pady=3)
 
-        btn = ctk.CTkButton(scroll_f, text="결정력 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(weight="bold", size=11), height=32, command=self.run_power_optimization)
+        btn = ctk.CTkButton(scroll_f, text="결정력 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_power_optimization)
         btn.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(10, 5), padx=2)
 
     def setup_bulk_tab(self, parent):
@@ -327,33 +325,32 @@ class OptimizerView:
         scroll_f.pack(fill="both", expand=True, padx=2, pady=2)
         scroll_f.grid_columnconfigure(1, weight=1)
 
-        # 내구 최적화 탭 상단 목록 갱신 버튼
-        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(size=11, weight="bold"), height=26, command=self.refresh_samples)
+        refresh_btn = ctk.CTkButton(scroll_f, text="샘플 목록 갱신", fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), height=26, command=self.refresh_samples)
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
-        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_pkm1.grid(row=1, column=1, sticky="ew", pady=3)
         if self.sample_files: self.bulk_pkm1.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_bulk_moves())
+        ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_bulk_moves(), font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_pkm2.grid(row=2, column=1, sticky="ew", pady=3)
         if self.sample_files: self.bulk_pkm2.set(self.sample_files[0])
 
-        ctk.CTkLabel(scroll_f, text="상대 기술 선택:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="상대 기술 선택:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
         
         bulk_move_frame = ctk.CTkFrame(scroll_f, fg_color="transparent")
         bulk_move_frame.grid(row=3, column=1, sticky="ew", pady=3)
         bulk_move_frame.grid_columnconfigure(0, weight=1)
 
-        self.bulk_move_input = ctk.CTkComboBox(bulk_move_frame, values=["기술을 선택하세요"], width=100, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        self.bulk_move_input = ctk.CTkComboBox(bulk_move_frame, values=["기술을 선택하세요"], width=100, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_move_input.pack(side="left", fill="x", expand=True, padx=(0, 2))
 
-        add_bulk_btn = ctk.CTkButton(bulk_move_frame, text="추가", width=40, height=26, fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", command=self.add_bulk_skill)
+        add_bulk_btn = ctk.CTkButton(bulk_move_frame, text="추가", width=40, height=26, fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", command=self.add_bulk_skill, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         add_bulk_btn.pack(side="right")
 
-        ctk.CTkLabel(scroll_f, text="선택된 상대 기술:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="선택된 상대 기술:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
         
         self.bulk_tags_container = ctk.CTkScrollableFrame(scroll_f, orientation="horizontal", fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=6, height=50)
         self.bulk_tags_container.grid(row=4, column=1, sticky="ew", pady=3)
@@ -361,72 +358,72 @@ class OptimizerView:
         self.bulk_tags_frame = ctk.CTkFrame(self.bulk_tags_container, fg_color="transparent")
         self.bulk_tags_frame.pack(side="left", anchor="w")
 
-        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_av_sp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=5, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_av_sp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_av_sp.grid(row=5, column=1, sticky="ew", pady=3)
         self.bulk_av_sp.insert(0, "66")
 
-        ctk.CTkLabel(scroll_f, text="방어 성격 보정:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_nature_b = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="방어 성격 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_nature_b = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_nature_b.grid(row=6, column=1, sticky="ew", pady=3)
         self.bulk_nature_b.set("1.0")
 
-        ctk.CTkLabel(scroll_f, text="특방 성격 보정:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=7, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_nature_d = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="특방 성격 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=7, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_nature_d = ctk.CTkComboBox(scroll_f, values=["1.1", "1.0", "0.9"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_nature_d.grid(row=7, column=1, sticky="ew", pady=3)
         self.bulk_nature_d.set("1.0")
 
-        ctk.CTkLabel(scroll_f, text="상대 공격 랭크:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=8, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_rank_a = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="상대 공격 랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=8, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_rank_a = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_rank_a.grid(row=8, column=1, sticky="ew", pady=3)
         self.bulk_rank_a.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="내 방어 랭크:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=9, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_rank_b = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="내 방어 랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=9, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_rank_b = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_rank_b.grid(row=9, column=1, sticky="ew", pady=3)
         self.bulk_rank_b.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="남은 체력(%):", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=10, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_target_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="남은 체력(%):", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=10, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_target_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_target_hp.grid(row=10, column=1, sticky="ew", pady=3)
         self.bulk_target_hp.insert(0, "0")
 
-        ctk.CTkLabel(scroll_f, text="물리 가중치:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_w_def = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="물리 가중치:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_w_def = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_w_def.grid(row=11, column=1, sticky="ew", pady=3)
         self.bulk_w_def.insert(0, "0.5")
 
-        ctk.CTkLabel(scroll_f, text="특수 가중치:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_w_spdef = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="특수 가중치:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_w_spdef = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_w_spdef.grid(row=12, column=1, sticky="ew", pady=3)
         self.bulk_w_spdef.insert(0, "0.5")
 
-        ctk.CTkLabel(scroll_f, text="타수 (다중 공격시 1):", font=ctk.CTkFont(size=10, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_hits = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="타수 (다중 공격시 1):", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_hits = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_hits.grid(row=13, column=1, sticky="ew", pady=3)
         self.bulk_hits.insert(0, "1")
 
-        ctk.CTkLabel(scroll_f, text="견딜 확률(%):", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_tg_prob = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="견딜 확률(%):", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_tg_prob = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_tg_prob.grid(row=14, column=1, sticky="ew", pady=3)
         self.bulk_tg_prob.insert(0, "100")
 
-        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_weather.grid(row=15, column=1, sticky="ew", pady=3)
         self.bulk_weather.set("")
 
-        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_field.grid(row=16, column=1, sticky="ew", pady=3)
         self.bulk_field.set("")
 
-        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(size=11, weight="bold"), text_color="#000000").grid(row=17, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=17, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_crit_var = ctk.BooleanVar(value=False)
-        self.bulk_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.bulk_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(size=11))
+        self.bulk_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.bulk_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_crit_chk.grid(row=17, column=1, sticky="w", pady=3)
 
-        btn = ctk.CTkButton(scroll_f, text="내구 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(weight="bold", size=11), height=32, command=self.run_bulk_optimization)
+        btn = ctk.CTkButton(scroll_f, text="내구 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_bulk_optimization)
         btn.grid(row=18, column=0, columnspan=2, sticky="ew", pady=(15, 5), padx=2)
 
     def add_power_skill(self):
@@ -447,7 +444,7 @@ class OptimizerView:
             tag_btn = ctk.CTkButton(
                 self.power_tags_frame, text=f"{move} ✕", width=0, height=22,
                 fg_color="#DBF4FF", hover_color="#ff9999", text_color="#000000",
-                font=ctk.CTkFont(size=10),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=10),
                 command=lambda m=move: self.remove_power_skill(m)
             )
             tag_btn.pack(side="left", padx=2, pady=2)
@@ -470,7 +467,7 @@ class OptimizerView:
             tag_btn = ctk.CTkButton(
                 self.bulk_tags_frame, text=f"{move} ✕", width=0, height=22,
                 fg_color="#DBF4FF", hover_color="#ff9999", text_color="#000000",
-                font=ctk.CTkFont(size=10),
+                font=ctk.CTkFont(family=FONT_FAMILY, size=10),
                 command=lambda m=move: self.remove_bulk_skill(m)
             )
             tag_btn.pack(side="left", padx=2, pady=2)

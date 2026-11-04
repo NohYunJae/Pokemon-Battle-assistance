@@ -10,6 +10,7 @@ from pokeCSVbuilder import SampleCSVbuilder
 from .utils.cache_manager import GameDataCache
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
+FONT_FAMILY = "Malgun Gothic"
 
 
 class AutoCompleteEntry(ctk.CTkFrame):
@@ -24,11 +25,11 @@ class AutoCompleteEntry(ctk.CTkFrame):
 
         self.entry = ctk.CTkEntry(
             self, textvariable=self.var, width=width, height=26,
-            fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000"
+            fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11)
         )
         self.entry.pack(fill="x")
         
-        # 키보드 이벤트 바인딩 (방향키, 엔터, 탭)
         self.entry.bind("<Down>", self.on_key_down)
         self.entry.bind("<Up>", self.on_key_up)
         self.entry.bind("<Return>", self.on_return)
@@ -36,10 +37,9 @@ class AutoCompleteEntry(ctk.CTkFrame):
 
         self.listbox_win = None
         self.listbox = None
-        self._after_id = None  # 디바운스 타이머
+        self._after_id = None
 
     def update_values(self, new_values):
-        """데이터가 로드된 후 자동완성 목록을 동적으로 업데이트"""
         self.suggestions = new_values or []
         self.lower_suggestions = [(item, item.lower()) for item in self.suggestions]
 
@@ -74,7 +74,7 @@ class AutoCompleteEntry(ctk.CTkFrame):
             self.listbox = tk.Listbox(
                 self.listbox_win, width=18, height=len(matches),
                 bg="#082746", fg="#ffffff", selectbackground="#ef4444", selectforeground="#ffffff",
-                font=("Arial", 13), bd=0, highlightthickness=0
+                font=(FONT_FAMILY, 11), bd=0, highlightthickness=0
             )
             self.listbox.pack(fill="both", expand=True)
             self.listbox.bind("<<ListboxSelect>>", self.on_select)
@@ -87,7 +87,7 @@ class AutoCompleteEntry(ctk.CTkFrame):
         try:
             x = self.entry.winfo_rootx()
             y = self.entry.winfo_rooty() + self.entry.winfo_height()
-            self.listbox_win.geometry(f"{self.entry.winfo_width()}x{len(matches)*16}+{x}+{y}")
+            self.listbox_win.geometry(f"{self.entry.winfo_width()}x{len(matches)*18}+{x}+{y}")
             self.listbox_win.deiconify()
         except Exception:
             pass
@@ -125,7 +125,6 @@ class AutoCompleteEntry(ctk.CTkFrame):
             return "break"
 
     def on_tab(self, event):
-        # 탭 누를 때 드롭다운 닫기
         self.hide_dropdown()
         return None
 
@@ -142,7 +141,6 @@ class SampleView:
         self.create_widgets()
         self.load_pokemon_image("samplesheetimg", size=(300, 200))
         
-        # 백그라운드 스레드로 캐시 로드
         threading.Thread(target=self._load_cache_background, daemon=True).start()
 
     def _load_cache_background(self):
@@ -185,16 +183,13 @@ class SampleView:
             print(f"이미지 로드 오류: {e}")
 
     def create_widgets(self):
-        # 1. 전체 메인 카드
         main_card = ctk.CTkFrame(self.tab, fg_color="#DAF6FE", corner_radius=12, border_width=2, border_color="#000000")
         main_card.pack(fill="both", expand=True, padx=8, pady=4)
 
-        # 상단 타이틀
         title_ribbon = ctk.CTkFrame(main_card, fg_color="#FFFFFF", corner_radius=8, border_width=1.5, border_color="#000000", height=30)
         title_ribbon.pack(anchor="w", padx=12, pady=(8, 4))
-        ctk.CTkLabel(title_ribbon, text="포켓몬 배틀 샘플 생성기", text_color="#000000", font=ctk.CTkFont(family="Arial", size=14, weight="bold")).pack(side="left", padx=10, pady=2)
+        ctk.CTkLabel(title_ribbon, text="포켓몬 배틀 샘플 생성기", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold")).pack(side="left", padx=10, pady=2)
 
-        # 2. 좌우 분할 컨테이너 (왼쪽: 입력폼 / 오른쪽: 결과 시트 뷰어)
         split_container = ctk.CTkFrame(main_card, fg_color="transparent")
         split_container.pack(fill="both", expand=True, padx=8, pady=4)
 
@@ -204,11 +199,10 @@ class SampleView:
         self.bg_image_label = ctk.CTkLabel(left_frame, text="", fg_color="transparent")
         self.bg_image_label.place(relx=0.5, rely=0.86, anchor="center")
 
-        # --- 오른쪽: 결과 시트 뷰어 ---
         right_frame = ctk.CTkFrame(split_container, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         right_frame.pack(side="right", fill="both", expand=True, padx=(4, 0), pady=2)
 
-        ctk.CTkLabel(right_frame, text="[실시간 결과 시트 미리보기]", text_color="#000000", font=ctk.CTkFont(family="Arial", size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
+        ctk.CTkLabel(right_frame, text="[실시간 결과 시트 미리보기]", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
         
         self.canvas_container = ctk.CTkFrame(right_frame, fg_color="#ffffff", corner_radius=8, border_width=1, border_color="#000000")
         self.canvas_container.pack(fill="both", expand=True, padx=8, pady=(0, 8))
@@ -230,10 +224,9 @@ class SampleView:
             self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all"))
         self.result_inner_frame.bind("<Configure>", _on_frame_configure)
 
-        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트가 여기에 표시됩니다.", text_color="#666666", font=("Arial", 11))
+        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트가 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
         self.init_placeholder.pack(padx=20, pady=40)
 
-        # --- 왼쪽: 입력 폼들 ---
         form_card = ctk.CTkFrame(left_frame, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         form_card.pack(fill="x", padx=4, pady=4)
 
@@ -243,7 +236,6 @@ class SampleView:
         ew = 130
         eh = 26
 
-        # 필드 목록 재정렬 (각 행마다 2개의 세트가 좌우로 균일하게 배치되도록 수정)
         fields = [
             [("파일명:", "entry_filename", "pikachu_sample", ctk.CTkEntry, None), ("포켓몬 이름:", "entry_name", "피카츄", AutoCompleteEntry, self.pokemon_list)],
             [("지닌도구:", "entry_item", "전기구슬", ctk.CTkEntry, None), ("특성:", "entry_ability", "피뢰침", ctk.CTkEntry, None)],
@@ -256,7 +248,7 @@ class SampleView:
                 label_text, var_name, default_val, widget_type, sugg = item
                 col_idx = col_offset * 2
 
-                ctk.CTkLabel(form_grid, text=label_text, text_color="#000000", font=ctk.CTkFont(weight="bold", size=11)).grid(row=r, column=col_idx, sticky="w", padx=(2 if col_idx == 0 else 8, 2), pady=4)
+                ctk.CTkLabel(form_grid, text=label_text, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11)).grid(row=r, column=col_idx, sticky="w", padx=(2 if col_idx == 0 else 8, 2), pady=4)
                 
                 if widget_type == AutoCompleteEntry:
                     w = widget_type(form_grid, suggestions=sugg, width=ew)
@@ -264,51 +256,48 @@ class SampleView:
                     if var_name == "entry_name":
                         self.entry_name = w
                 elif widget_type == "combo":
-                    w = ctk.CTkComboBox(form_grid, values=default_val, width=ew, height=eh, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+                    w = ctk.CTkComboBox(form_grid, values=default_val, width=ew, height=eh, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
                     w.set("")
                 else:
-                    w = ctk.CTkEntry(form_grid, width=ew, height=eh, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+                    w = ctk.CTkEntry(form_grid, width=ew, height=eh, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
                     w.insert(0, default_val)
                 
                 setattr(self, var_name, w)
                 w.grid(row=r, column=col_idx + 1, sticky="w", padx=2, pady=4)
 
-        # SPs 섹션
         sps_card = ctk.CTkFrame(left_frame, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         sps_card.pack(fill="x", padx=4, pady=4)
         sps_inner = ctk.CTkFrame(sps_card, fg_color="transparent")
         sps_inner.pack(fill="x", padx=6, pady=5)
-        ctk.CTkLabel(sps_inner, text="SPs [HP,A,B,C,D,S]:", text_color="#000000", font=ctk.CTkFont(weight="bold", size=10)).pack(side="left", padx=2)
+        ctk.CTkLabel(sps_inner, text="SPs [HP,A,B,C,D,S]:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=2)
         
         self.entry_sps = []
         for i, lbl in enumerate(["HP", "A", "B", "C", "D", "S"]):
-            ctk.CTkLabel(sps_inner, text=lbl, text_color="#000000", font=ctk.CTkFont(weight="bold", size=10)).pack(side="left", padx=(3, 1))
-            e = ctk.CTkEntry(sps_inner, width=38, height=24, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+            ctk.CTkLabel(sps_inner, text=lbl, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=(3, 1))
+            e = ctk.CTkEntry(sps_inner, width=38, height=24, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
             e.pack(side="left", padx=1)
             e.insert(0, ["2", "0", "0", "32", "0", "32"][i])
             self.entry_sps.append(e)
 
-        # IVs 섹션
         ivs_card = ctk.CTkFrame(left_frame, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         ivs_card.pack(fill="x", padx=4, pady=4)
         ivs_inner = ctk.CTkFrame(ivs_card, fg_color="transparent")
         ivs_inner.pack(fill="x", padx=6, pady=5)
-        ctk.CTkLabel(ivs_inner, text="IVs [HP,A,B,C,D,S]:", text_color="#000000", font=ctk.CTkFont(weight="bold", size=10)).pack(side="left", padx=2)
+        ctk.CTkLabel(ivs_inner, text="IVs [HP,A,B,C,D,S]:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=2)
         
         self.entry_ivs = []
         for i, lbl in enumerate(["HP", "A", "B", "C", "D", "S"]):
-            ctk.CTkLabel(ivs_inner, text=lbl, text_color="#000000", font=ctk.CTkFont(weight="bold", size=10)).pack(side="left", padx=(3, 1))
-            e = ctk.CTkEntry(ivs_inner, width=38, height=24, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000")
+            ctk.CTkLabel(ivs_inner, text=lbl, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=(3, 1))
+            e = ctk.CTkEntry(ivs_inner, width=38, height=24, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
             e.pack(side="left", padx=1)
             e.insert(0, "31")
             self.entry_ivs.append(e)
 
-        # 기술 세팅 섹션
         moves_card = ctk.CTkFrame(left_frame, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         moves_card.pack(fill="x", padx=4, pady=4)
         moves_inner = ctk.CTkFrame(moves_card, fg_color="transparent")
         moves_inner.pack(fill="x", padx=6, pady=5)
-        ctk.CTkLabel(moves_inner, text="기술 세팅:", text_color="#000000", font=ctk.CTkFont(weight="bold", size=10)).pack(side="left", padx=2)
+        ctk.CTkLabel(moves_inner, text="기술 세팅:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=2)
         
         self.entry_moves = []
         for i, dm in enumerate(["10만볼트", "볼트체인지", "잠재파워", "방어"]):
@@ -317,17 +306,16 @@ class SampleView:
             e.set(dm)
             self.entry_moves.append(e)
 
-        # 하단 액션 (로그 + 버튼)
         action_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
         action_frame.pack(fill="x", padx=4, pady=(6, 8))
 
-        self.log_box = ctk.CTkTextbox(action_frame, height=42, font=("Arial", 10), fg_color="#DBF4FF", text_color="#000000", corner_radius=8, border_width=1.5, border_color="#000000")
+        self.log_box = ctk.CTkTextbox(action_frame, height=42, font=(FONT_FAMILY, 10), fg_color="#DBF4FF", text_color="#000000", corner_radius=8, border_width=1.5, border_color="#000000")
         self.log_box.pack(side="left", fill="both", expand=True, padx=(0, 4))
         self.log_box.insert("end", "[시스템] 준비 완료.\n")
 
         self.btn_submit = ctk.CTkButton(
             action_frame, text="생성", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff",
-            font=ctk.CTkFont(weight="bold", size=11), height=42, width=75, corner_radius=8, border_width=1.5, border_color="#000000",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=42, width=75, corner_radius=8, border_width=1.5, border_color="#000000",
             command=self.on_submit
         )
         self.btn_submit.pack(side="right")
@@ -348,14 +336,12 @@ class SampleView:
             weather = self.combo_weather.get().strip() or None
             field = self.combo_field.get().strip() or None
 
-            # 1. 파일 저장 실행 (level=50 고정 전달)
             saved_path = SampleCSVbuilder.make_sample_csv(
                 filename, name, note, item, ability, nature, level, SPs, IVs, moves, weather, field
             )
             self.log_box.insert("end", f"[성공] 저장 완료: {os.path.basename(saved_path)}\n")
             self.log_box.see("end")
 
-            # 2. GameDataCache를 이용해 메모리 캐시에서 도감 정보 즉시 조회
             pokedex_cache = GameDataCache.get_pokedex()
             pokemon_data = pokedex_cache.get(name)
             if not pokemon_data:
@@ -364,7 +350,6 @@ class SampleView:
             base_stats = pokemon_data["base_stats"]
             types = pokemon_data["types"]
 
-            # 3. 데이터 계산 및 시트 생성
             move_dict_cache = GameDataCache.get_move_dict()
             pkm = Pokemon(name, nature, SPs, IVs, level, item, ability)
             
@@ -429,7 +414,6 @@ class SampleView:
                 ["속도 추월 라인"] + [spd - 21] + find_out_run(spd)
             ]
 
-            # 기존 위젯 정리 및 렌더링
             for widget in self.result_inner_frame.winfo_children():
                 widget.destroy()
 
@@ -439,7 +423,7 @@ class SampleView:
                     ctk.CTkLabel(
                         self.result_inner_frame, text=str(val if val is not None else ""), width=75, height=22,
                         fg_color="#E6F7FF" if is_h else "#FFFFFF", text_color="#000000", corner_radius=3,
-                        font=ctk.CTkFont(size=10, weight="bold" if is_h else "normal")
+                        font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold" if is_h else "normal")
                     ).grid(row=r_idx, column=c_idx, padx=1, pady=1, sticky="nsew")
 
         except Exception as e:

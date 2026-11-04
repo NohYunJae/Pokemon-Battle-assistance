@@ -9,7 +9,7 @@ from .utils.cache_manager import GameDataCache
 from calculator.utils.nature_chart import nature_chart
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
-
+FONT_FAMILY = "Malgun Gothic"
 
 class AutocompleteCombobox(ctk.CTkFrame):
     def __init__(self, master, values=None, command=None, **kwargs):
@@ -18,7 +18,7 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.command = command
 
         self.var = ctk.StringVar()
-        self.entry = ctk.CTkEntry(self, textvariable=self.var, height=22, font=ctk.CTkFont(size=11))
+        self.entry = ctk.CTkEntry(self, textvariable=self.var, height=22, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.entry.pack(side="left", fill="none", expand=False)
         
         self.entry.bind("<KeyRelease>", self._on_key_release)
@@ -30,16 +30,15 @@ class AutocompleteCombobox(ctk.CTkFrame):
         if self.command:
             self.var.trace_add("write", lambda *args: self.command(self.var.get()))
 
-        # [개선 4] 팝업 창과 리스트박스를 처음부터 미리 생성하여 재사용 (Toplevel 재사용)
         self.listbox_window = tk.Toplevel(self)
         self.listbox_window.wm_overrideredirect(True)
         self.listbox_window.attributes("-topmost", True)
-        self.listbox_window.withdraw()  # 평소에는 숨겨둠
+        self.listbox_window.withdraw()
 
         self.listbox = tk.Listbox(
             self.listbox_window, 
             height=5, 
-            font=("Arial", 11),
+            font=(FONT_FAMILY, 11),
             bg="#F8FAFC",
             fg="#0F172A",
             selectbackground="#0284C7",
@@ -53,7 +52,6 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.listbox.bind("<<ListboxSelect>>", self._on_select)
         self.listbox.bind("<Return>", self._on_return)
 
-        # 디바운싱용 타이머 ID 저장 변수
         self._debounce_timer = None
 
     def get(self):
@@ -68,12 +66,8 @@ class AutocompleteCombobox(ctk.CTkFrame):
     def _on_key_release(self, event):
         if event.keysym in ("Down", "Up", "Return", "Escape", "Tab"):
             return
-        
-        # [개선 3] 디바운싱: 타이핑 중에는 이전 검색 예약 타이머를 취소
         if self._debounce_timer is not None:
             self.after_cancel(self._debounce_timer)
-        
-        # 마지막 입력 후 80ms 동안 추가 입력이 없을 때만 실제 검색 실행
         self._debounce_timer = self.after(80, self._perform_search)
 
     def _perform_search(self):
@@ -81,7 +75,6 @@ class AutocompleteCombobox(ctk.CTkFrame):
         if not typed:
             self._close_listbox()
             return
-
         matches = [v for v in self.values if typed in v.lower()]
         if matches:
             self._show_listbox(matches)
@@ -92,19 +85,14 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.listbox.delete(0, tk.END)
         for m in matches:
             self.listbox.insert(tk.END, m)
-        
-        # 리스트 아이템 수에 맞추어 Listbox 내부 height 동적 조절
         self.listbox.config(height=min(len(matches), 5))
 
         try:
             x = self.entry.winfo_rootx()
             y = self.entry.winfo_rooty() + self.entry.winfo_height()
             width = self.entry.winfo_width()
-            # 높이 계산 (항목당 약 22픽셀)
             item_count = min(len(matches), 5)
             self.listbox_window.geometry(f"{width}x{item_count * 22}+{x}+{y}")
-            
-            # [개선 4] 창을 파괴하지 않고 숨겨진 상태에서 화면에 노출 (deiconify)
             self.listbox_window.deiconify()
         except Exception:
             pass
@@ -138,7 +126,6 @@ class AutocompleteCombobox(ctk.CTkFrame):
                 self.command(selected)
 
     def _on_return(self, event):
-        # 팝업 창이 열려 있고 리스트박스 항목이 선택되어 있다면 선택 처리
         if self.listbox_window and self.listbox_window.state() == "normal" and self.listbox.size() > 0:
             if not self.listbox.curselection():
                 self.listbox.selection_set(0)
@@ -155,7 +142,6 @@ class AutocompleteCombobox(ctk.CTkFrame):
     def _close_listbox(self):
         if self.listbox_window:
             try:
-                # [개선 4] 창을 파괴(destroy)하지 않고 숨김 처리(withdraw)하여 재사용
                 self.listbox_window.withdraw()
             except Exception:
                 pass
@@ -175,27 +161,23 @@ class CalculatorView(ctk.CTkFrame):
         self.nature_list = list(nature_chart.keys())
         self._is_initialized = False
 
-        # --- 레이아웃 구성 (왼쪽 박스는 내용에 맞게 고정, 오른쪽은 남은 공간 확장) ---
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # 왼쪽/오른쪽 큰 박스 테두리를 검정색 진하게 처리 (border_color="#000000", border_width=1.5)
         self.left_frame = ctk.CTkFrame(self, fg_color="#F0F9FF", corner_radius=8, border_width=1.5, border_color="#000000")
         self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(5, 3), pady=5)
 
         self.right_frame = ctk.CTkFrame(self, fg_color="#F0F9FF", corner_radius=8, border_width=1.5, border_color="#000000")
         self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(3, 5), pady=5)
 
-        # [왼쪽] 입력 폼 영역 (상하 패딩을 8, 4로 축소)
-        title_label = ctk.CTkLabel(self.left_frame, text="배틀 계산기", font=ctk.CTkFont(family="Arial", size=13, weight="bold"))
+        title_label = ctk.CTkLabel(self.left_frame, text="배틀 계산기", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"))
         title_label.pack(anchor="w", padx=12, pady=(8, 4))
 
         input_container = ctk.CTkFrame(self.left_frame, fg_color="transparent")
         input_container.pack(fill="both", expand=False, padx=12, pady=2)
 
-        # 1. 공격자 설정 (섹션 제목 간격 축소)
-        atk_label = ctk.CTkLabel(input_container, text="[공격자 설정]", font=ctk.CTkFont(weight="bold", size=12))
+        atk_label = ctk.CTkLabel(input_container, text="[공격자 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
         atk_label.pack(anchor="w", pady=(1, 1))
         
         self.atk_name_combo = self._create_autocomplete_row(input_container, "포켓몬:", [], command=lambda x: self.run_calculation())
@@ -212,13 +194,11 @@ class CalculatorView(ctk.CTkFrame):
         self.atk_item_entry = self._create_input_row(input_container, "지닌물건:", "", command=lambda e: self.run_calculation())
         self.atk_ability_entry = self._create_input_row(input_container, "특성:", "", command=lambda e: self.run_calculation())
         
-        # 공격 [SP] 및 랭크
         self.atk_sp_entry, self.atk_rank_entry = self._create_sp_with_rank_row(
             input_container, self.atk_sp_label_var, "32", "0", command=lambda e: self.run_calculation()
         )
 
-        # 2. 방어자 설정
-        def_label = ctk.CTkLabel(input_container, text="[방어자 설정]", font=ctk.CTkFont(weight="bold", size=12))
+        def_label = ctk.CTkLabel(input_container, text="[방어자 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
         def_label.pack(anchor="w", pady=(4, 1))
 
         self.def_name_combo = self._create_autocomplete_row(input_container, "포켓몬:", [], command=lambda x: self.run_calculation())
@@ -231,30 +211,26 @@ class CalculatorView(ctk.CTkFrame):
         
         self.def_sp_h_entry = self._create_input_row(input_container, "체력 [SP] :", "32", command=lambda e: self.run_calculation())
         
-        # 방어 [SP] 및 랭크
         self.def_sp_stat_entry, self.def_rank_entry = self._create_sp_with_rank_row(
             input_container, self.def_sp_stat_label_var, "32", "0", command=lambda e: self.run_calculation()
         )
 
-        # 날씨 선택 콤보박스
         self.weather_combo = self._create_combo_row(
             input_container, "날씨:", ["", "쾌청", "비", "눈", "모래바람"], 
             command=lambda x: self.run_calculation()
         )
         self.weather_combo.set("")
 
-        # 필드 선택 콤보박스
         self.field_combo = self._create_combo_row(
             input_container, "필드:", ["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], 
             command=lambda x: self.run_calculation()
         )
         self.field_combo.set("")
 
-        # [오른쪽] 결과 출력 영역
-        res_title_label = ctk.CTkLabel(self.right_frame, text="📊 계산 결과", font=ctk.CTkFont(family="Arial", size=15, weight="bold"))
+        res_title_label = ctk.CTkLabel(self.right_frame, text="📊 계산 결과", font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"))
         res_title_label.pack(anchor="w", padx=15, pady=(15, 10))
 
-        self.result_textbox = ctk.CTkTextbox(self.right_frame, fg_color="#FFFFFF", text_color="#1E293B", corner_radius=8, font=ctk.CTkFont(size=13))
+        self.result_textbox = ctk.CTkTextbox(self.right_frame, fg_color="#FFFFFF", text_color="#1E293B", corner_radius=8, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
         self.result_textbox.pack(fill="both", expand=True, padx=15, pady=(0, 15))
         
         self.result_textbox.configure(state="normal")
@@ -285,7 +261,6 @@ class CalculatorView(ctk.CTkFrame):
         self.def_name_combo.update_values(self.pokemon_list)
         self.move_name_combo_widget.update_values(self.move_list)
 
-        # 기본값을 빈 문자열 "" 로 설정
         self.atk_name_combo.set("")
         self.def_name_combo.set("")
         self.move_name_combo_widget.set("")
@@ -302,12 +277,10 @@ class CalculatorView(ctk.CTkFrame):
 
     def _create_input_row(self, parent, label_text, default_value="", command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # 행 간격을 1로 축소
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         lbl.pack(side="left")
-        # 입력칸 높이를 20으로 축소
-        entry = ctk.CTkEntry(frame, width=120, height=20, font=ctk.CTkFont(size=11))
+        entry = ctk.CTkEntry(frame, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         entry.pack(side="left")
         entry.insert(0, default_value)
         entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -317,10 +290,9 @@ class CalculatorView(ctk.CTkFrame):
 
     def _create_sp_with_rank_row(self, parent, label_var, default_sp="32", default_rank="0", command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # 행 간격을 1로 축소
         frame.pack(fill="x", pady=1)
         
-        lbl = ctk.CTkLabel(frame, textvariable=label_var, width=80, anchor="w", font=ctk.CTkFont(size=11, weight="bold"))
+        lbl = ctk.CTkLabel(frame, textvariable=label_var, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"))
         lbl.pack(side="left")
 
         right_sub_frame = ctk.CTkFrame(frame, fg_color="transparent")
@@ -340,8 +312,7 @@ class CalculatorView(ctk.CTkFrame):
                 if command:
                     command(None)
 
-        # SP 입력칸 높이를 19로 축소
-        sp_entry = ctk.CTkEntry(right_sub_frame, width=45, height=19, font=ctk.CTkFont(size=11), justify="center")
+        sp_entry = ctk.CTkEntry(right_sub_frame, width=45, height=19, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
         sp_entry.pack(side="left", padx=(0, 2))
         sp_entry.insert(0, default_sp)
         sp_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -351,20 +322,19 @@ class CalculatorView(ctk.CTkFrame):
         sp_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
         sp_btn_frame.pack(side="left", padx=(0, 6))
         
-        up_btn_s = ctk.CTkButton(sp_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(size=7),
+        up_btn_s = ctk.CTkButton(sp_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
                                  fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
                                  command=lambda: adjust_value(sp_entry, 1, 0, 32))
         up_btn_s.pack(side="top", fill="x")
-        down_btn_s = ctk.CTkButton(sp_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(size=7),
+        down_btn_s = ctk.CTkButton(sp_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
                                    fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
                                    command=lambda: adjust_value(sp_entry, -1, 0, 32))
         down_btn_s.pack(side="bottom", fill="x")
 
-        rank_lbl = ctk.CTkLabel(right_sub_frame, text="랭크:", font=ctk.CTkFont(size=10), anchor="e")
+        rank_lbl = ctk.CTkLabel(right_sub_frame, text="랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=10), anchor="e")
         rank_lbl.pack(side="left", padx=(0, 2))
 
-        # 랭크 입력칸 높이를 19로 축소
-        rank_entry = ctk.CTkEntry(right_sub_frame, width=35, height=19, font=ctk.CTkFont(size=11), justify="center")
+        rank_entry = ctk.CTkEntry(right_sub_frame, width=35, height=19, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
         rank_entry.pack(side="left", padx=(0, 2))
         rank_entry.insert(0, default_rank)
         rank_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -374,11 +344,11 @@ class CalculatorView(ctk.CTkFrame):
         rank_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
         rank_btn_frame.pack(side="left")
 
-        up_btn_r = ctk.CTkButton(rank_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(size=7),
+        up_btn_r = ctk.CTkButton(rank_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
                                  fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
                                  command=lambda: adjust_value(rank_entry, 1, -6, 6))
         up_btn_r.pack(side="top", fill="x")
-        down_btn_r = ctk.CTkButton(rank_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(size=7),
+        down_btn_r = ctk.CTkButton(rank_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
                                    fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
                                    command=lambda: adjust_value(rank_entry, -1, -6, 6))
         down_btn_r.pack(side="bottom", fill="x")
@@ -387,12 +357,10 @@ class CalculatorView(ctk.CTkFrame):
 
     def _create_combo_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # 행 간격을 1로 축소
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         lbl.pack(side="left")
-        # 콤보박스 높이를 20으로 축소
-        combo = ctk.CTkComboBox(frame, values=values, width=120, height=20, font=ctk.CTkFont(size=11), command=command)
+        combo = ctk.CTkComboBox(frame, values=values, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11), command=command)
         combo.pack(side="left")
         if values:
             combo.set(values[0])
@@ -401,9 +369,8 @@ class CalculatorView(ctk.CTkFrame):
 
     def _create_autocomplete_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # 행 간격을 1로 축소
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         lbl.pack(side="left")
 
         ac_box = AutocompleteCombobox(frame, values=values, command=command)
@@ -415,10 +382,9 @@ class CalculatorView(ctk.CTkFrame):
 
     def _create_move_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # 행 간격을 1로 축소
         frame.pack(fill="x", pady=1)
         
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(size=11))
+        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         lbl.pack(side="left")
 
         right_sub_frame = ctk.CTkFrame(frame, fg_color="transparent")
@@ -428,15 +394,13 @@ class CalculatorView(ctk.CTkFrame):
         self.move_name_combo_widget.entry.configure(width=100, height=20)
         self.move_name_combo_widget.pack(side="left", padx=(0, 3))
 
-        # 기술 위력 입력칸 높이를 20으로 축소
-        self.move_power_entry = ctk.CTkEntry(right_sub_frame, width=35, height=20, font=ctk.CTkFont(size=11), justify="center")
+        self.move_power_entry = ctk.CTkEntry(right_sub_frame, width=35, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
         self.move_power_entry.pack(side="left", padx=(0, 3))
         self.move_power_entry.insert(0, "85")
         self.move_power_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
         self.move_power_entry.bind("<KeyRelease>", lambda e: self.run_calculation())
 
-        # 기술 타입 입력칸 높이를 20으로 축소
-        self.move_type_entry = ctk.CTkEntry(right_sub_frame, width=45, height=20, font=ctk.CTkFont(size=11), justify="center")
+        self.move_type_entry = ctk.CTkEntry(right_sub_frame, width=45, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
         self.move_type_entry.pack(side="left")
         self.move_type_entry.insert(0, "노말")
         self.move_type_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
