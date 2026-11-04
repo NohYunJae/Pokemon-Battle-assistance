@@ -11,6 +11,60 @@ def _clean(val):
   return val
 
 
+def _safe_int(val, default=0):
+  """빈 값이거나 숫자가 아닐 경우 안전하게 정수로 변환하는 헬퍼 함수"""
+  try:
+    if val is None:
+      return default
+    val_str = str(val).strip()
+    val_str = val_str.replace("—", "0").replace("–", "0").replace("*", "")
+    return int(val_str) if val_str != "" else default
+  except (ValueError, TypeError):
+    return default
+
+
+# --- 포켓몬 데이터 메모리 캐시 ---
+_POKEDEX_CACHE = None
+
+
+def load_pokedex_cache():
+  """Pokedex.csv를 읽어 메모리에 캐시하고 반환합니다."""
+  global _POKEDEX_CACHE
+  if _POKEDEX_CACHE is not None:
+    return _POKEDEX_CACHE
+
+  _POKEDEX_CACHE = {}
+  data_path = os.path.join(DATA_DIR, "data")
+  os.makedirs(data_path, exist_ok=True)
+  csv_path = os.path.join(data_path, "Pokedex.csv")
+
+  if os.path.exists(csv_path):
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+      reader = csv.DictReader(f)
+      for row in reader:
+        # 딕셔너리 키/값 정제
+        row = {_clean(k): _clean(v) for k, v in row.items() if k is not None}
+        pkm_name = row.get("포켓몬", "")
+        if not pkm_name:
+          continue
+
+        base_stats = [
+            _safe_int(row.get("체력")),
+            _safe_int(row.get("공격")),
+            _safe_int(row.get("방어")),
+            _safe_int(row.get("특수공격")),
+            _safe_int(row.get("특수방어")),
+            _safe_int(row.get("스피드")),
+        ]
+        type1 = row.get("타입1", "")
+        type2 = row.get("타입2", "")
+        _POKEDEX_CACHE[pkm_name] = {
+            "base_stats": base_stats,
+            "types": [type1, type2] if type2 else [type1],
+        }
+  return _POKEDEX_CACHE
+
+
 class PokemonCSVLoader:
   """샘플 CSV 파일로부터 포켓몬 데이터를 불러오는 클래스"""
   """Data list : 포켓몬, 타입, 성격, SPs, IVs, 기술, 종족치, 실수치, 지닌도구, 특성"""
