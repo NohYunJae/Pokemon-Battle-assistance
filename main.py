@@ -10,13 +10,10 @@ from views.optimizer_view import OptimizerView
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 
 # ==========================================
-# [전체 디자인 설정 영역] 메인 창 및 폰트/디자인 스타일 통일
+# [전체 디자인 설정 영역]
 # ==========================================
 MAIN_UI_CONFIG = {
-    # 폰트를 통일하고자 할 때 아래 패밀리명을 수정하세요 (예: "Malgun Gothic", "AppleGothic", "Arial" 등)
     "font_family": "Malgun Gothic",
-    
-    # 탭 버튼 선택/비선택 색상
     "tab_selected_bg": "#0284C7",
     "tab_selected_hover": "#0369A1",
     "tab_unselected_bg": "#93C5FD",
