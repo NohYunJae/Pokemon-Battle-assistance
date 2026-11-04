@@ -17,7 +17,7 @@ class TeamAnalyzer:
             self.party.append(data)
 
     def get_main_moves(self, sample):
-        """결정력 계산 및 주력기 선정 로직"""
+        """결정력 계산 및 주력기/보조기 선정 로직"""
         pkm = Pokemon(sample["포켓몬"], sample["성격"], sample["SPs"], sample["IVs"], 
                     lv = 50, item=sample.get("지닌도구"), ability=sample.get("특성"))
 
@@ -61,36 +61,75 @@ class TeamAnalyzer:
         multiplier = 1.0
         for def_type in def_types:
             if def_type and atk_type in type_chart:
-                # type_chart에 명시된 상성이 있으면 곱하고, 없으면 기본 1.0배[cite: 2]
                 mult = type_chart[atk_type].get(def_type, 1.0)
                 multiplier *= mult
         return multiplier
 
     def analyze_party_offense(self):
-        """주력기 결정력 검증 및 복합 타입 고려 반감/무효/1/4배 분석"""
-        print("\n=== [파티 공격 상성, 복합 타입 반감/무효 및 물리/특수 비율 분석] ===")
+        """주력기 및 보조기 결정력 검증, 1배 결정력 4만 이상 고려 약점 타격 불가 조합 분석"""
+        print("\n=== [파티 공격 상성, 복합 타입 약점 타격 및 물리/특수 비율 분석] ===")
         
         main_types = set()
+        sub_types = set()
         category_counts = {"물리": 0, "특수": 0, "변화": 0}
+        
+        # 파티 전체의 모든 공격 기술(주력기 + 보조기) 정보를 담을 리스트
+        all_party_moves = []
 
         for i in range(len(self.party)):
             mvs = self.get_main_moves(self.party[i])
             
-            # 주력기 타입 수집 및 카테고리 집계
+            # 주력기 타입 수집 및 카테고리 집계, 상세 기술 정보 저장
             for item_list in mvs["주력기목록"]:
                 for move in item_list:
                     main_types.add(move["기술타입"])
                     cat = move["카테고리"]
                     if cat in category_counts:
                         category_counts[cat] += 1
+                    all_party_moves.append({
+                        "기술명": move["기술명"],
+                        "기술타입": move["기술타입"],
+                        "데미지": move["데미지"]
+                    })
 
+            # 보조기 타입 수집 및 카테고리 집계, 상세 기술 정보 저장
             for item_list in mvs["보조기목록"]:
                 for move in item_list:
+                    sub_types.add(move["기술타입"])
                     cat = move["카테고리"]
                     if cat in category_counts:
                         category_counts[cat] += 1
+                    all_party_moves.append({
+                        "기술명": move["기술명"],
+                        "기술타입": move["기술타입"],
+                        "데미지": move["데미지"]
+                    })
 
-        print(f"파티 주력기 타입 목록: {list(main_types)}")
+        type_to_moves = {}
+        for sample in self.party:
+            mvs = self.get_main_moves(sample)
+            for item_list in mvs["주력기목록"]:
+                for move in item_list:
+                    t = move["기술타입"]
+                    name = move["기술명"]
+                    if t not in type_to_moves:
+                        type_to_moves[t] = set()
+                    type_to_moves[t].add(name)
+            for item_list in mvs["보조기목록"]:
+                for move in item_list:
+                    t = move["기술타입"]
+                    name = move["기술명"]
+                    if t not in type_to_moves:
+                        type_to_moves[t] = set()
+                    type_to_moves[t].add(f"(보조){name}")
+
+        # 타입별 기술 목록 출력
+        print("\n[파티 보유 기술 타입별 목록 (주력기 및 보조기 포함)]")
+        if type_to_moves:
+            for atk_type, names in type_to_moves.items():
+                print(f"- {atk_type}: {', '.join(names)}")
+        else:
+            print("- 등록된 공격 기술이 없습니다.")
 
         # 물리/특수 비율 계산 출력
         total_moves = sum(category_counts.values())
@@ -106,63 +145,56 @@ class TeamAnalyzer:
         # 모든 타입 리스트 (type_chart의 키 기준)
         all_types = list(type_chart.keys())
         
-        quarter_resisted = {} # 1/4배 반감 (0.25)
-        half_resisted = {}    # 1/2배 반감 (0.5)
-        immune = {}           # 0배 무효 (0.0)
-
-        # 단일 타입 및 주요 복합 타입 쌍을 만들어 검사
-        # (모든 경우의 수를 체크하기 위해 1개 혹은 2개 조합 생성)
+        # 조건에 맞는 방어 타입 조합 도출 (약점을 못 찌르며, 1배라도 결정력 4만 이상인 기술이 없는 경우)
+        unweakened_combinations = []
         checked_combinations = set()
 
         for t1 in all_types:
-            # 단일 타입 검사
             comb = (t1,)
-            self._evaluate_defense_combo(comb, main_types, quarter_resisted, half_resisted, immune)
+            if self._is_completely_unweakened(comb, all_party_moves):
+                unweakened_combinations.append(comb)
 
-            # 복합 타입 검사 (t1 + t2)
             for t2 in all_types:
                 if t1 != t2:
-                    comb = tuple(sorted([t1, t2])) # 순서 상관없이 동일 조합 처리 (예: 불꽃/강철 == 강철/불꽃)
+                    comb = tuple(sorted([t1, t2]))
                     if comb not in checked_combinations:
                         checked_combinations.add(comb)
-                        self._evaluate_defense_combo(comb, main_types, quarter_resisted, half_resisted, immune)
+                        if self._is_completely_unweakened(comb, all_party_moves):
+                            unweakened_combinations.append(comb)
 
-        print("\n[방어 타입별 반감/무효 정보 (우리 파티 주력기 기준, 복합 타입 포함)]")
-        
-        if quarter_resisted:
-            print("\n  • 1/4배 반감되는 방어 타입 조합:")
-            for def_combo, atk_list in quarter_resisted.items():
-                print(f"    - {'/'.join(def_combo)} 타입: {', '.join(atk_list)} 공격")
+        print("\n[🛡️ 경고: 파티의 기술로 약점을 못 찌르며, 1배 타격 시에도 결정력 4만 이상을 내지 못하는 방어 타입 조합]")
+        print("(이 방어 타입을 가진 상대 앞에서는 고화력 1배 타격이나 약점 찌르기가 모두 불가능하여 돌파하기 매우 까다롭습니다)")
+        if unweakened_combinations:
+            for def_combo in unweakened_combinations:
+                print(f"  - {'/'.join(def_combo)} 타입 조합")
+        else:
+            print("  - 없음 (모든 방어 타입 조합에 대해 약점을 찌르거나 1배로 4만 이상의 결정력을 낼 수 있는 기술이 존재합니다)")
 
-        if half_resisted:
-            print("\n  • 1/2배 반감되는 방어 타입 조합:")
-            for def_combo, atk_list in half_resisted.items():
-                print(f"    - {'/'.join(def_combo)} 타입: {', '.join(atk_list)} 공격")
+    def _is_completely_unweakened(self, def_combo, all_party_moves):
+        """
+        주어진 방어 타입 조합(def_combo)에 대해, 파티의 모든 기술(주력기+보조기) 중
+        1. 약점(2배 이상)을 찌르는 기술이 있거나,
+        2. 1배 이상(1.0 이상 2.0 미만)이면서 결정력(dmg_output)이 43,000 이상인 기술이
+        단 하나라도 존재하면 대처 가능하다고 판단하여 False를 반환합니다.
+        어떤 기술도 위 조건을 만족하지 못할 때만 True(대처 불가)를 반환합니다.
+        """
+        if not all_party_moves:
+            return True
 
-        if immune:
-            print("\n  • 0배(무효)되는 방어 타입 조합:")
-            for def_combo, atk_list in immune.items():
-                print(f"    - {'/'.join(def_combo)} 타입: {', '.join(atk_list)} 공격")
-
-    def _evaluate_defense_combo(self, def_combo, main_types, quarter_resisted, half_resisted, immune):
-        """특정 방어 타입 조합에 대해 파티 주력기들의 상성 배율을 평가"""
-        for atk_type in main_types:
+        for move in all_party_moves:
+            atk_type = move["기술타입"]
+            dmg = move["데미지"]
             mult = self._get_type_multiplier(atk_type, def_combo)
-            if mult == 0.25:
-                if def_combo not in quarter_resisted:
-                    quarter_resisted[def_combo] = []
-                if atk_type not in quarter_resisted[def_combo]:
-                    quarter_resisted[def_combo].append(atk_type)
-            elif mult == 0.5:
-                if def_combo not in half_resisted:
-                    half_resisted[def_combo] = []
-                if atk_type not in half_resisted[def_combo]:
-                    half_resisted[def_combo].append(atk_type)
-            elif mult == 0.0:
-                if def_combo not in immune:
-                    immune[def_combo] = []
-                if atk_type not in immune[def_combo]:
-                    immune[def_combo].append(atk_type)
+
+            # 조건 1: 약점을 찌르는 경우 (2배 이상)
+            if mult >= 2.0 and dmg > 26000:
+                return False
+            
+            # 조건 2: 1배 결정력이 45,000 이상인 경우
+            if mult == 1.0 and dmg >= 43000:
+                return False
+        
+        return True
 
     def analyze_party_defense(self):
         """파티 방어 상성 분석: 파티원 절반 초과 기준 약점 및 반감 불가(1배 이상) 타입 분석"""
@@ -214,8 +246,6 @@ class TeamAnalyzer:
 
 
 if __name__ == "__main__":
-    # 테스트할 샘플 파일 이름 리스트 (실제 'PokemonDATA/data/samples/' 폴더 안에 있는 파일명으로 수정해주세요)
-    # 예: "sample1.csv", "sample2.csv" 등이 있다면 확장자(.csv)를 제외하거나 포함하여 작성
     test_samples = [
         "배북마릴리", 
         "철벽바프메메타", 
@@ -227,13 +257,10 @@ if __name__ == "__main__":
     
     print("=== [팀 분석기(TeamAnalyzer) 테스트 시작] ===")
     try:
-        # TeamAnalyzer 객체 생성
         analyzer = TeamAnalyzer(test_samples)
         
-        # 1. 공격 상성 및 주력기/카테고리 분석 실행
         analyzer.analyze_party_offense()
         
-        # 2. 방어 상성 및 공통 약점 분석 실행
         analyzer.analyze_party_defense()
         
     except Exception as e:

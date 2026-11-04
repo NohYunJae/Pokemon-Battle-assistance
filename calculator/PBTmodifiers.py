@@ -151,11 +151,13 @@ class Power_modifiers:
     def item_mods(self, atk_stat):
         if self.pkm.item == "구애머리띠" and self.move.category == "물리":
             atk_stat = atk_stat * 6144 // 4096
+
         elif self.pkm.item == "구애안경" and self.move.category == "특수":
             atk_stat = atk_stat * 6144 // 4096
 
         if TYPE_BOOST_ITEMS.get(self.pkm.item) == self.move.type:
             item_power_mod = 1.2
+            
         else:
             item_power_mod = 1
 
@@ -170,6 +172,13 @@ class Bulk_modifiers:
     def ability_mods(self):
         if self.defender.ability == "두꺼운지방" and self.move.type in ["얼음", "불꽃"]:
             ability_mod = 0.5
+       
+        elif self.defender.ability == "타오르는불꽃" and self.move.type == "불꽃":
+            ability_mod = 0
+
+        elif self.defender.ability == "부유" and self.move.type == "땅":
+            ability_mod = 0
+
         else:
             ability_mod = 1
 
