@@ -195,7 +195,7 @@ class TeamAnalyzer:
                 if mult >= 1.0:
                     not_resisted_counts[atk_type] = not_resisted_counts.get(atk_type, 0) + 1
 
-        common_weaknesses = {k: v for k, v in weakness_counts.items() if v > threshold}
+        common_weaknesses = {k: v for k, v in weakness_counts.items() if v >= threshold}
         sorted_weaknesses = sorted(common_weaknesses.items(), key=lambda x: x[1], reverse=True)
 
         common_not_resisted = {k: v for k, v in not_resisted_counts.items() if v > threshold}
@@ -212,19 +212,27 @@ class PokemonSelector:
         self.pochampslst = pochamps_pokemon_list
 
     def recommend_pokemon(self, party_samples):
-        """파티 보완 포켓몬 추천 로직"""
+        """파티 보완 포켓몬 추천 로직 (파티원 전원이 반감하지 못하는 타입을 약점으로 갖는 포켓몬 제외)"""
         analyzer = TeamAnalyzer(party_samples)
         defense_result = analyzer.analyze_party_defense()
         common_weaknesses = defense_result["common_weaknesses"]
         common_not_resisted = defense_result["common_not_resisted"]
         
-        vulnerable_types = set(common_weaknesses.keys()).union(set(common_not_resisted.keys()))
-
-        # 기존 파티의 방어 타입 리스트 및 확장 파티 기준(threshold) 계산
         existing_party_types = [sample.get("타입", []) for sample in analyzer.party]
         new_party_size = len(analyzer.party) + 1
         new_threshold = new_party_size / 2
         all_attack_types = list(type_chart.keys())
+
+        # 💡 핵심 추가: 현재 파티원 '그 누구도' 반감(1배 미만)시키지 못하는 타입들을 파악
+        # (즉, 파티 내 모든 포켓몬의 상성 배율이 1.0 이상인 타입들)
+        completely_unresisted_types = set()
+        for atk_type in all_attack_types:
+            all_fail_to_resist = all(
+                analyzer._get_type_multiplier(atk_type, def_types) >= 1.0
+                for def_types in existing_party_types
+            )
+            if all_fail_to_resist:
+                completely_unresisted_types.add(atk_type)
 
         general_recommendations = []
         mega_recommendations = []
@@ -247,35 +255,48 @@ class PokemonSelector:
             # 2. 후보 포켓몬을 포함했을 때 새로운 과반수 이상의 공통 약점이 생기는지 확인 -> 제외
             introduces_new_common_weakness = False
             for atk_type in all_attack_types:
-                # 기존 파티원 중 이 타입이 약점인 마릿수
                 weak_count = sum(
                     1 for def_types in existing_party_types 
                     if analyzer._get_type_multiplier(atk_type, def_types) >= 2.0
                 )
-                # 후보 포켓몬도 이 타입이 약점이면 +1
                 if analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0:
                     weak_count += 1
                 
-                # 확장된 파티 기준 절반 초과(> new_threshold)인 경우 새로운 공통 약점 발생으로 판단
-                if weak_count > new_threshold:
+                if weak_count >= new_threshold:
                     introduces_new_common_weakness = True
                     break
             
             if introduces_new_common_weakness:
                 continue
 
-            # 파티의 취약 타입 중 이 포켓몬이 반감(1배 미만) 이하로 막아주는 타입들 찾기
-            covered_types = [
-                atk_type for atk_type in vulnerable_types
+            # 🚨 3. 추가 조건: 파티원 전원이 반감하지 못하는 타입(completely_unresisted_types)을
+            # 후보 포켓몬이 약점(2배 이상)으로 잡히는 경우 -> 제외
+            has_fatal_blindspot_weakness = any(
+                analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0
+                for atk_type in completely_unresisted_types
+            )
+            if has_fatal_blindspot_weakness:
+                continue
+
+            # 4. 1순위와 2순위 보완 능력 개수(점수) 계산
+            covered_weaknesses = [
+                atk_type for atk_type in common_weaknesses.keys()
                 if analyzer._get_type_multiplier(atk_type, poke_types) < 1.0
             ]
+            
+            covered_not_resisted = [
+                atk_type for atk_type in common_not_resisted.keys()
+                if atk_type not in common_weaknesses and analyzer._get_type_multiplier(atk_type, poke_types) < 1.0
+            ]
 
-            if covered_types:
+            total_covered = covered_weaknesses + covered_not_resisted
+            if total_covered:
                 item = {
                     "name": poke_name,
                     "types": poke_types,
-                    "covered_types": covered_types,
-                    "score": len(covered_types)
+                    "covered_types": total_covered,
+                    "weakness_score": len(covered_weaknesses),      
+                    "not_resisted_score": len(covered_not_resisted) 
                 }
 
                 if poke_name.startswith("메가") and poke_name != "메가니움":
@@ -283,65 +304,65 @@ class PokemonSelector:
                 else:
                     general_recommendations.append(item)
 
-        general_recommendations.sort(key=lambda x: (x["score"], x["name"]), reverse=True)
-        mega_recommendations.sort(key=lambda x: (x["score"], x["name"]), reverse=True)
+        sort_key = lambda x: (x["weakness_score"], x["not_resisted_score"], x["name"])
         
-        return general_recommendations[:30], mega_recommendations[:30], common_weaknesses, common_not_resisted
+        general_recommendations.sort(key=sort_key, reverse=True)
+        mega_recommendations.sort(key=sort_key, reverse=True)
+        
+        return general_recommendations[:50], mega_recommendations[:50], common_weaknesses, common_not_resisted
 
 
 if __name__ == "__main__":
     test_samples = [
-        "철벽바프메메타", 
         "트릭룸카디나르마", 
-        "한카리아스", 
         "스카프에써르", 
-        "트릭룸메갑주"
+        "트릭룸메갑주",
+        "HD하마돈샘플",
+        "배북마릴리",
+        "조심특수만다"
     ]
     
     print("=== [방어 보완 포켓몬 추천 및 파티 취약 타입 분석] ===")
     try:
         selector = PokemonSelector()
-        general_top30, mega_top30, common_weaknesses, common_not_resisted = selector.recommend_pokemon(test_samples)
+        general_top50, mega_top50, common_weaknesses, common_not_resisted = selector.recommend_pokemon(test_samples)
         
-        # 파티 방어 취약 타입 및 개수 출력
         print("\n[파티 방어 취약 타입 분석 현황]")
-        print("  • 공통 약점 타입 (2배 이상 찔리는 파티원 수):")
+        print("  • 공통 약점 타입 (1순위 보완 대상):")
         if common_weaknesses:
             for w_type, cnt in common_weaknesses.items():
                 print(f"    - {w_type}: {cnt}마리")
         else:
             print("    - 없음")
             
-        print("  • 반감 불가 타입 (1배 이상 데미지를 입는 파티원 수 - 방어하지 못하는 타입):")
+        print("  • 반감 불가 타입 (2순위 보완 대상):")
         if common_not_resisted:
             for nr_type, cnt in common_not_resisted.items():
                 print(f"    - {nr_type}: {cnt}마리")
         else:
             print("    - 없음")
 
-        # 1. 일반 포켓몬 출력
-        print(f"\n✨ [일반 포켓몬] 방어 보완 추천 상위 {len(general_top30)}마리:\n")
-        if general_top30:
-            for idx, item in enumerate(general_top30, 1):
+        print(f"\n✨ [일반 포켓몬] 방어 보완 추천 상위 {len(general_top50)}마리:\n")
+        if general_top50:
+            for idx, item in enumerate(general_top50, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
                 c_types = ', '.join(item["covered_types"])
                 print(f"  {idx:2d}. [{p_name}] (방어 타입: {p_types})")
-                print(      f"      🛡️ 반감 가능한 파티 취약 타입: {c_types} (총 {item['score']}개 보완)")
-                print("-" * 65)
+                print(      f"      🛡️ 보완한 취약 타입: {c_types} (공통약점 보완: {item['weakness_score']}개 / 반감불가 보완: {item['not_resisted_score']}개)")
+                print("-" * 75)
         else:
             print("  - 조건을 만족하는 일반 포켓몬이 없습니다.")
 
-        # 2. 메가진화 포켓몬 출력
-        print(f"\n✨ [메가진화 포켓몬] 방어 보완 추천 상위 {len(mega_top30)}마리:\n")
-        if mega_top30:
-            for idx, item in enumerate(mega_top30, 1):
+        print(f"\n✨ [메가진화 포켓몬] 방어 보완 추천 상위 {len(mega_top50)}마리:\n")
+        if mega_top50:
+            for idx, item in enumerate(mega_top50, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
                 c_types = ', '.join(item["covered_types"])
                 print(f"  {idx:2d}. [{p_name}] (방어 타입: {p_types})")
-                print(      f"      🛡️ 반감 가능한 파티 취약 타입: {c_types} (총 {item['score']}개 보완)")
-                print("-" * 65)
+                print(      f"      🛡️ 보완한 취약 타입: {c_types} (공통약점 보완: {item['weakness_score']}개 / 반감불가 보완: {item['not_resisted_score']}개)")
+                print("-" * 75)
         else:
             print("  - 조건을 만족하는 메가진화 포켓몬이 없습니다.")
             
