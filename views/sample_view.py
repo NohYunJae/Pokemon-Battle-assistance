@@ -137,6 +137,7 @@ class SampleView:
         self.tab = parent_tab
         self.pokemon_list = []
         self.move_list = []
+        self.pending_sample_data = None  # 미리보기 상태에서 저장할 데이터를 담을 변수
         
         self.create_widgets()
         self.load_pokemon_image("samplesheetimg", size=(300, 200))
@@ -205,7 +206,7 @@ class SampleView:
         ctk.CTkLabel(right_frame, text="[실시간 결과 시트 미리보기]", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
         
         self.canvas_container = ctk.CTkFrame(right_frame, fg_color="#ffffff", corner_radius=8, border_width=1, border_color="#000000")
-        self.canvas_container.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.canvas_container.pack(fill="both", expand=True, padx=8, pady=(0, 4))
 
         self.result_canvas = tk.Canvas(self.canvas_container, bg="#ffffff", highlightthickness=0)
         self.v_scrollbar = ctk.CTkScrollbar(self.canvas_container, orientation="vertical", command=self.result_canvas.yview)
@@ -224,8 +225,27 @@ class SampleView:
             self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all"))
         self.result_inner_frame.bind("<Configure>", _on_frame_configure)
 
-        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트가 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
+        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트 미리보기가 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
         self.init_placeholder.pack(padx=20, pady=40)
+
+        # 미리보기 하단 저장/취소 버튼 영역 (초기에는 숨김 또는 비활성화 상태)
+        self.preview_action_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
+        self.preview_action_frame.pack(fill="x", padx=8, pady=(0, 8))
+
+        self.btn_save = ctk.CTkButton(
+            self.preview_action_frame, text="저장하기", fg_color="#10b981", hover_color="#059669", text_color="#ffffff",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, corner_radius=6,
+            command=self.on_confirm_save
+        )
+        self.btn_save.pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+        self.btn_cancel = ctk.CTkButton(
+            self.preview_action_frame, text="취소", fg_color="#6b7280", hover_color="#4b5563", text_color="#ffffff",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, corner_radius=6, width=80,
+            command=self.on_cancel_preview
+        )
+        self.btn_cancel.pack(side="right")
+        self.preview_action_frame.pack_forget()  # 최초에는 숨김
 
         form_card = ctk.CTkFrame(left_frame, fg_color="#E6F7FF", corner_radius=10, border_width=1.5, border_color="#000000")
         form_card.pack(fill="x", padx=4, pady=4)
@@ -311,16 +331,17 @@ class SampleView:
 
         self.log_box = ctk.CTkTextbox(action_frame, height=42, font=(FONT_FAMILY, 10), fg_color="#DBF4FF", text_color="#000000", corner_radius=8, border_width=1.5, border_color="#000000")
         self.log_box.pack(side="left", fill="both", expand=True, padx=(0, 4))
-        self.log_box.insert("end", "[시스템] 준비 완료.\n")
+        self.log_box.insert("end", "[시스템] 준비 완료. 값을 입력 후 '미리보기'를 누르세요.\n")
 
         self.btn_submit = ctk.CTkButton(
-            action_frame, text="생성", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff",
+            action_frame, text="미리보기", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff",
             font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=42, width=75, corner_radius=8, border_width=1.5, border_color="#000000",
             command=self.on_submit
         )
         self.btn_submit.pack(side="right")
 
     def on_submit(self):
+        """버튼 클릭 시 데이터를 계산하고 저장 대신 미리보기를 생성합니다."""
         try:
             filename = self.entry_filename.get().strip()
             name = self.entry_name.get().strip()
@@ -336,10 +357,14 @@ class SampleView:
             weather = self.combo_weather.get().strip() or None
             field = self.combo_field.get().strip() or None
 
-            saved_path = SampleCSVbuilder.make_sample_csv(
-                filename, name, note, item, ability, nature, level, SPs, IVs, moves, weather, field
-            )
-            self.log_box.insert("end", f"[성공] 저장 완료: {os.path.basename(saved_path)}\n")
+            # 저장에 필요한 데이터를 임시 보관
+            self.pending_sample_data = {
+                "filename": filename, "name": name, "note": note, "item": item,
+                "ability": ability, "nature": nature, "level": level,
+                "SPs": SPs, "IVs": IVs, "moves": moves, "weather": weather, "field": field
+            }
+
+            self.log_box.insert("end", f"[미리보기] '{name}' 샘플 미리보기 생성됨. 저장 여부를 선택하세요.\n")
             self.log_box.see("end")
 
             pokedex_cache = GameDataCache.get_pokedex()
@@ -426,6 +451,39 @@ class SampleView:
                         font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold" if is_h else "normal")
                     ).grid(row=r_idx, column=c_idx, padx=1, pady=1, sticky="nsew")
 
+            # 미리보기 생성 완료 후 저장/취소 버튼 노출
+            self.preview_action_frame.pack(fill="x", padx=8, pady=(0, 8))
+
         except Exception as e:
             self.log_box.insert("end", f"[오류] {str(e)}\n")
             self.log_box.see("end")
+
+    def on_confirm_save(self):
+        """미리보기 후 사용자가 [저장하기]를 눌렀을 때 실행됩니다."""
+        if not self.pending_sample_data:
+            return
+        try:
+            d = self.pending_sample_data
+            saved_path = SampleCSVbuilder.make_sample_csv(
+                d["filename"], d["name"], d["note"], d["item"], d["ability"], 
+                d["nature"], d["level"], d["SPs"], d["IVs"], d["moves"], d["weather"], d["field"]
+            )
+            self.log_box.insert("end", f"[성공] 파일 저장 완료: {os.path.basename(saved_path)}\n")
+            self.log_box.see("end")
+            self.preview_action_frame.pack_forget()  # 저장 완료 후 버튼 숨김
+            self.pending_sample_data = None
+        except Exception as e:
+            self.log_box.insert("end", f"[저장 오류] {str(e)}\n")
+            self.log_box.see("end")
+
+    def on_cancel_preview(self):
+        """미리보기 후 사용자가 [취소]를 눌렀을 때 실행됩니다."""
+        self.pending_sample_data = None
+        self.preview_action_frame.pack_forget()
+        for widget in self.result_inner_frame.winfo_children():
+            widget.destroy()
+        
+        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트 미리보기가 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
+        self.init_placeholder.pack(padx=20, pady=40)
+        self.log_box.insert("end", "[취소] 샘플 저장이 취소되었습니다.\n")
+        self.log_box.see("end")
