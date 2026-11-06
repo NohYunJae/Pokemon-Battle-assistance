@@ -132,8 +132,19 @@ class PokemonStatOptimizer:
         total_cases = roll_survive.shape[0]
         survival_probabilities = survived_count / total_cases
         
-        # 요구 확률 조건을 만족하는 스탯 조합만 True로 마스킹 (1순위 풀)
+        # 1순위: 요구 확률 조건을 만족하는 스탯 조합 마스크
         tier1_mask = mask & (survival_probabilities >= target_prob / 100)
+
+        # 가중치 기반 내구 점수 미리 계산
+        Bulk_phys = np.floor(H * B / 0.411)
+        Bulk_sp = np.floor(H * D / 0.411)
+
+        phys_norm = Bulk_phys / np.nanmax(Bulk_phys)
+        sp_norm = Bulk_sp / np.nanmax(Bulk_sp)
+
+        score = w_def * phys_norm + w_spdef * sp_norm
+        total_sp = H_sp + B_sp + D_sp
+        score = np.where(mask, score, -np.inf)
 
         # 체력 조건 규칙 정의
         is_life_orb = (pkm1.item == "생명의구슬")
@@ -155,66 +166,40 @@ class PokemonStatOptimizer:
             True
         )
 
-        # 각 순위별 독립 마스크 생성 (전체 SP 제한 범위 내에서 검사)
-        pure_tier2_mask = mask & benefical_hp_rule1
-        pure_tier3_mask = mask & benefical_hp_rule2
-
-        # 1순위 만족 조합 확인
-        applied_tier1 = np.any(tier1_mask)
-        
-        # 2순위: 1순위 안에서 찾되, 없으면 2순위 조건만 단독으로 만족하는 풀에서 탐색
-        tier2_mask = tier1_mask & benefical_hp_rule1
-        if np.any(tier2_mask):
-            applied_tier2 = True
-        elif np.any(pure_tier2_mask):
-            tier2_mask = pure_tier2_mask
-            applied_tier2 = "조건 완화(2순위 단독)"
+        # 핵심 로직: 1순위(생존 확률) 만족 조합이 있으면 tier1_mask 사용,
+        # 없으면 가중치 기반 유효 조합 풀(mask & 유효 점수)을 새로운 1순위 베이스로 설정
+        if np.any(tier1_mask):
+            base_pool = tier1_mask
+            applied_tier1 = True
         else:
-            tier2_mask = np.zeros_like(mask, dtype=bool)
+            base_pool = mask & np.isfinite(score)
+            applied_tier1 = "미달로 인한 가중치 기반 풀 대체"
+
+        # 2순위 적용 (base_pool 기준)
+        tier2_mask = base_pool & benefical_hp_rule1
+        if np.any(tier2_mask):
+            current_pool_for_3 = tier2_mask
+            applied_tier2 = True
+        else:
+            current_pool_for_3 = base_pool
             applied_tier2 = False
 
-        # 3순위: 직전 풀(2순위 또는 1순위) 안에서 찾되, 없으면 3순위 조건만 단독으로 만족하는 풀에서 탐색
-        base_pool_for_3 = tier2_mask if np.any(tier2_mask) else (tier1_mask if applied_tier1 else mask)
-        tier3_mask = base_pool_for_3 & benefical_hp_rule2
-        
-        if np.any(tier3_mask):
-            applied_tier3 = True
-        elif np.any(pure_tier3_mask):
-            tier3_mask = pure_tier3_mask
-            applied_tier3 = "조건 완화(3순위 단독)"
-        else:
-            tier3_mask = np.zeros_like(mask, dtype=bool)
-            applied_tier3 = False
-
-        # 최종 최적화 풀 결정 (3순위 -> 2순위 -> 1순위 순으로 우선 적용)
+        # 3순위 적용 (current_pool_for_3 기준)
+        tier3_mask = current_pool_for_3 & benefical_hp_rule2
         if np.any(tier3_mask):
             final_optimized_mask = tier3_mask
-        elif np.any(tier2_mask):
-            final_optimized_mask = tier2_mask
-        elif applied_tier1:
-            final_optimized_mask = tier1_mask
+            applied_tier3 = True
         else:
-            # 모든 조건이 안 되면 전체 유효 범위에서 가중치 기반 탐색
-            final_optimized_mask = mask
+            final_optimized_mask = current_pool_for_3
+            applied_tier3 = False
 
-        print(f"\n[우선순위 독립 적용 결과]")
-        print(f"\n1순위(목표 내구도) 만족 조합 수: {np.sum(tier1_mask)}개")
-        print(f"\n2순위(체력 실수치 조건) 적용 상태: {applied_tier2}")
-        print(f"\n3순위(체력 실수치 홀수 조건) 적용 상태: {applied_tier3}")
-        print(f"\n최종 조건 만족 스탯 조합 수: {np.sum(final_optimized_mask)}개")
-
-        Bulk_phys = np.floor(H * B / 0.411)
-        Bulk_sp = np.floor(H * D / 0.411)
-
-        phys_norm = Bulk_phys / np.nanmax(Bulk_phys)
-        sp_norm = Bulk_sp / np.nanmax(Bulk_sp)
-
-        score = w_def * phys_norm + w_spdef * sp_norm
-        total_sp = H_sp + B_sp + D_sp
+        print(f"\n[우선순위 적용 결과]")
+        print(f"1순위(목표 생존 확률) 상태: {applied_tier1} (조합 수: {np.sum(tier1_mask)}개)")
+        print(f"2순위(체력 실수치 조건) 적용 성공 여부: {'성공' if applied_tier2 else '조건 만족 조합 없어 상위 풀 유지'}")
+        print(f"3순위(체력 실수치 홀수 조건) 적용 성공 여부: {'성공' if applied_tier3 else '조건 만족 조합 없어 상위 풀 유지'}")
+        print(f"최종 조건 만족 스탯 조합 수: {np.sum(final_optimized_mask)}개")
 
         # 유효한 SP 분배만 점수 계산에 사용
-        score = np.where(mask, score, -np.inf)
-
         if np.any(final_optimized_mask):
             min_sp = int(np.min(total_sp[final_optimized_mask]))
             max_sp = int(np.max(total_sp[final_optimized_mask]))
@@ -236,7 +221,7 @@ class PokemonStatOptimizer:
                 (f"최대 생존 SP ({max_sp} SP)", max_sp_positions),
             ]
         else:
-            print(f"⚠️조건을 만족하는 포인트 분배가 없습니다. 가중치 기반 내구 최적화를 진행합니다.")
+            print(f"⚠️조건을 만족하는 포인트 분배가 없습니다.")
             min_sp = None
             max_sp = None
             min_sp_positions = None
@@ -301,7 +286,7 @@ class PokemonStatOptimizer:
                     f"| 현재 HP = {int(tg_hp_val):d} |\n"
                     f"| 생존 확률 = {survival_prob:.2f}% |\n"
                     f"| 남은 HP (최고) = {int(best_remain_hp):d} ({int(best_remain_pct):d}%) |\n"
-                    f"| 남은 HP (최약) = {int(worst_remain_hp):d} ({int(worst_remain_pct):d}%) |\n"
+                    f"| 남은 HP (최악) = {int(worst_remain_hp):d} ({int(worst_remain_pct):d}%) |\n"
                     f"| 물리 내구 = {int(Bulk_phys[h, b, d]):d} |\n"
                     f"| 특수 내구 = {int(Bulk_sp[h, b, d]):d} |"
                 )
