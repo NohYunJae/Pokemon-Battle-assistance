@@ -110,6 +110,7 @@ class OptimizerView:
         left_frame.pack(side="left", fill="y", expand=False, padx=(0, 4), pady=2)
 
         self.opt_tabs = ctk.CTkTabview(left_frame, fg_color="transparent", segmented_button_fg_color="#DBF4FF", segmented_button_selected_color="#ef4444", segmented_button_selected_hover_color="#dc2626")
+        self.opt_tabs._segmented_button.configure(font=(FONT_FAMILY, 12, "bold"))
         self.opt_tabs.pack(fill="both", expand=True, padx=6, pady=6)
 
         tab_speed = self.opt_tabs.add("속도 최적화")

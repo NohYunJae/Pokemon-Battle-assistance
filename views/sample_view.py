@@ -74,7 +74,7 @@ class AutoCompleteEntry(ctk.CTkFrame):
             self.listbox = tk.Listbox(
                 self.listbox_win, width=18, height=len(matches),
                 bg="#082746", fg="#ffffff", selectbackground="#ef4444", selectforeground="#ffffff",
-                font=(FONT_FAMILY, 11), bd=0, highlightthickness=0
+                font=(FONT_FAMILY, 9), bd=0, highlightthickness=0
             )
             self.listbox.pack(fill="both", expand=True)
             self.listbox.bind("<<ListboxSelect>>", self.on_select)
@@ -225,7 +225,7 @@ class SampleView:
             self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all"))
         self.result_inner_frame.bind("<Configure>", _on_frame_configure)
 
-        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="생성 버튼을 누르면 시트 미리보기가 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
+        self.init_placeholder = ctk.CTkLabel(self.result_inner_frame, text="미리보기를 누르면 여기에 표시됩니다.", text_color="#666666", font=(FONT_FAMILY, 11))
         self.init_placeholder.pack(padx=20, pady=40)
 
         # 미리보기 하단 저장/취소 버튼 영역 (초기에는 숨김 또는 비활성화 상태)

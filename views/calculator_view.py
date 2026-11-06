@@ -38,10 +38,10 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.listbox = tk.Listbox(
             self.listbox_window, 
             height=5, 
-            font=(FONT_FAMILY, 11),
-            bg="#F8FAFC",
-            fg="#0F172A",
-            selectbackground="#0284C7",
+            font=(FONT_FAMILY, 9),
+            bg="#0C1C2C",
+            fg="#FFFFFF",
+            selectbackground="#C74002",
             selectforeground="#FFFFFF",
             relief="flat", 
             bd=0,
@@ -238,7 +238,7 @@ class CalculatorView(ctk.CTkFrame):
         self.result_textbox.insert("0.1", "⏳ [시스템] 캐시 초기화 중입니다... 잠시만 기다려주세요.")
         self.result_textbox.configure(state="disabled")
 
-        threading.Thread(target=self._load_cache_background, daemon=True).start()
+        self.after(100, lambda: threading.Thread(target=self._load_cache_background, daemon=True).start())
 
     def _load_cache_background(self):
         try:
@@ -254,7 +254,8 @@ class CalculatorView(ctk.CTkFrame):
 
             self.after(0, self._on_cache_loaded)
         except Exception as e:
-            self.after(0, lambda: self._on_cache_error(str(e)))
+            err_msg = str(e)  # ✅ 예외가 살아있을 때 문자열로 미리 복사
+            self.after(0, lambda: self._on_cache_error(err_msg))
 
     def _on_cache_loaded(self):
         self.atk_name_combo.update_values(self.pokemon_list)
