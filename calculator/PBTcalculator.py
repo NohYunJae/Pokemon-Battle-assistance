@@ -141,6 +141,48 @@ class BattleCalculator:
             percentages.append(np.round(dmg / def_hp * 100, 1))
 
         return damages, percentages
+    
+    def calculate_speed(self, rank_a, rank_b, item_a=None, item_b=None, weather=None):
+        pkm_a = self.attacker
+        pkm_b = self.defender
+        def calculate_ranked_stat(base_stat: int, rank: int) -> int:
+            if not -6 <= rank <= 6:
+                raise ValueError("랭크는 -6에서 +6 사이여야 합니다.")
+
+            if rank >= 0:
+                return (base_stat * (2 + rank)) // 2
+            else:
+                return (base_stat * 2) // (2 + abs(rank))
+            
+        def apply_item_modifiers(base_stat: int, item: str) -> int:
+            if item == "구애스카프":
+                return (base_stat * 3) // 2
+            else:
+                return base_stat
+            
+        def apply_ability_modifiers(base_stat: int, ability: str, weather) -> int:
+            if ability == "곡예":
+                return base_stat * 2
+            
+            elif ability == "쓱쓱" and weather == "비":
+                return base_stat * 2
+
+            elif ability == "모래헤치기" and weather == "모래바람":
+                return base_stat * 2
+            
+            else:
+                return base_stat
+
+        speed_a = calculate_ranked_stat(self.attacker.stats[5], rank_a)
+        speed_b = calculate_ranked_stat(self.defender.stats[5], rank_b)
+
+        speed_a = apply_ability_modifiers(speed_a, pkm_a.ability, weather)
+        speed_b = apply_ability_modifiers(speed_b, pkm_b.ability, weather)
+        
+        speed_a = apply_item_modifiers(speed_a, item_a)
+        speed_b = apply_item_modifiers(speed_b, item_b)
+
+        return speed_a, speed_b
 
 class DMGoutput_Bulk_Calculator:
     def __init__(self, pkm):

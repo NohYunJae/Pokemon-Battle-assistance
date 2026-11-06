@@ -6,6 +6,7 @@ from views.calculator_view import CalculatorView
 from views.sample_view import SampleView
 from views.battle_view import BattleView
 from views.optimizer_view import OptimizerView
+from views.spd_calc_view import SpdCalculatorView
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 
@@ -60,11 +61,13 @@ class BTAssistanceApp(ctk.CTk):
         self.tab_button_frame = ctk.CTkFrame(self.card_box, fg_color="transparent")
         self.tab_button_frame.pack(side="left", anchor="n", padx=(10, 5), pady=10)
 
+        # 탭 순서 수정: 배틀 계산기 바로 다음(2번)에 스피드 비교 배치
         tab_info = [
             ("1. 배틀 계산기", "calculator"),
-            ("2. 샘플 생성기", "sample"),
-            ("3. 배틀 시트", "battle"),
-            ("4. 스탯 최적화", "optimizer")
+            ("2. 스피드 비교", "spd_calc"),
+            ("3. 샘플 생성기", "sample"),
+            ("4. 배틀 시트", "battle"),
+            ("5. 스탯 최적화", "optimizer")
         ]
 
         self.tab_buttons = {}
@@ -88,19 +91,24 @@ class BTAssistanceApp(ctk.CTk):
         self.content_container = ctk.CTkFrame(self.card_box, fg_color="transparent")
         self.content_container.pack(side="right", fill="both", expand=True, padx=(0, 10), pady=10)
 
+        # 각 탭용 프레임 생성
         self.tab_calculator = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self.tab_spd_calc = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.tab_sample = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.tab_battle = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.tab_optimizer = ctk.CTkFrame(self.content_container, fg_color="transparent")
 
         self._tabs = {
             "calculator": self.tab_calculator,
+            "spd_calc": self.tab_spd_calc,
             "sample": self.tab_sample,
             "battle": self.tab_battle,
             "optimizer": self.tab_optimizer
         }
 
+        # 뷰 인스턴스 연결
         self.calculator_view = CalculatorView(self.tab_calculator)
+        self.spd_calc_view = SpdCalculatorView(self.tab_spd_calc)
         self.sample_view = SampleView(self.tab_sample)
         self.battle_view = BattleView(self.tab_battle)
         self.optimizer_view = OptimizerView(self.tab_optimizer)
