@@ -266,7 +266,7 @@ class PokemonSelector:
             introduces_new_common_weakness = False
             for atk_type in all_attack_types:
                 weak_count = sum(
-                    1 for def_types in existing_party_types 
+                    1 for def_types in existing_party_types
                     if analyzer._get_type_multiplier(atk_type, def_types) >= 2.0
                 )
                 if analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0:
