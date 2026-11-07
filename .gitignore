@@ -10,3 +10,9 @@ calculator/utils/__pycache__/
 loader/__pycache__/
 views/__pycache__/
 views/utils/__pycache__/
+.DS_Store
+calculator/.DS_Store
+calculator/utils/.DS_Store
+loader/.DS_Store
+views/.DS_Store
+views/utils/.DS_Store
