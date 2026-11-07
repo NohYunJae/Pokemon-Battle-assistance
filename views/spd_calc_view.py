@@ -229,7 +229,7 @@ class SpdCalculatorView(ctk.CTkFrame):
         self.result_textbox.insert("0.1", "⏳ [시스템] 캐시 초기화 중입니다... 잠시만 기다려주세요.")
         self.result_textbox.configure(state="disabled")
 
-        threading.Thread(target=self._load_cache_background, daemon=True).start()
+        self.after(100, lambda: threading.Thread(target=self._load_cache_background, daemon=True).start())
 
     def _load_cache_background(self):
         try:
