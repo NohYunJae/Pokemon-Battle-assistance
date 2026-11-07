@@ -61,7 +61,6 @@ class PokemonStatOptimizer:
 
         pkm2_move = pkm2_data["기술"]
 
-        # 단일 또는 다중 기술 인덱스(콤보) 리스트로 통일
         move_indices = [int(move_idxs)] if isinstance(move_idxs, (int, float)) else list(move_idxs)
 
         base_stats1 = pkm1_data["종족치"]
@@ -86,7 +85,6 @@ class PokemonStatOptimizer:
 
         sequence_dmg_matrices = []
 
-        # 기술 콤보 순회하며 각 기술의 데미지 배열 계산 및 적재
         for m_idx in move_indices:
             atk_move = move_dict.get(pkm2_move[m_idx - 1])
             mv_category = atk_move.category
@@ -100,11 +98,9 @@ class PokemonStatOptimizer:
             else:
                 raise ValueError(f"유효하지 않는 기술 분류: {mv_category}")
 
-            # 1회 공격 시의 16가지 난수 데미지 계산 후 NumPy 배열로 변환
             dmg_raw = BattleCalculator(pkm2, pkm1, atk_move).calculate_damage(atk, df, H, rank_a, rank_b, weather, field, crit)[0]
             dmg = np.asarray(dmg_raw)
             
-            # 각 타격별 독립된 16가지 난수의 모든 조합(Cartesian Product)을 누적 계산 (m타 시 16^m개 생성)
             current_combos = np.zeros((1, *dmg.shape[1:]))
             for _ in range(hits):
                 c_exp = current_combos[:, np.newaxis, :, :, :]
@@ -113,29 +109,23 @@ class PokemonStatOptimizer:
             
             sequence_dmg_matrices.append(current_combos)
 
-        # 여러 기술(콤보)의 데미지 분포를 순서대로 합산 (Cartesian Sum)
         total_dmg_combos = sequence_dmg_matrices[0]
         for next_dmg in sequence_dmg_matrices[1:]:
             c_exp = total_dmg_combos[:, np.newaxis, :, :, :]
             d_exp = next_dmg[np.newaxis, :, :, :, :]
             total_dmg_combos = (c_exp + d_exp).reshape(-1, *total_dmg_combos.shape[1:])
 
-        HP_rm = H * current_hp_percent / 100 - total_dmg_combos       # 각 조합별 남은 체력 배열
-
+        HP_rm = H * current_hp_percent / 100 - total_dmg_combos
         tg_hp = H * (1 - current_hp_percent / 100)
         
-        # 모든 난수 조합에 대해 목표 체력 초과 생존 여부 확인 (True / False)
         roll_survive = (HP_rm > tg_hp)
         
-        # 각 H, B, D 스탯 조합별로 실제 생존한 경우의 수 비율 계산
         survived_count = np.sum(roll_survive, axis=0)
         total_cases = roll_survive.shape[0]
         survival_probabilities = survived_count / total_cases
         
-        # 1순위: 요구 확률 조건을 만족하는 스탯 조합 마스크
         tier1_mask = mask & (survival_probabilities >= target_prob / 100)
 
-        # 가중치 기반 내구 점수 미리 계산
         Bulk_phys = np.floor(H * B / 0.411)
         Bulk_sp = np.floor(H * D / 0.411)
 
@@ -146,28 +136,25 @@ class PokemonStatOptimizer:
         total_sp = H_sp + B_sp + D_sp
         score = np.where(mask, score, -np.inf)
 
-        # 체력 조건 규칙 정의
         is_life_orb = (pkm1.item == "생명의구슬")
         is_sitrus_berry = (pkm1.item == "자뭉열매")
 
         benefical_hp_rule1 = np.where(
             is_sitrus_berry, 
-            (H % 2 == 0),  # 자뭉열매일 때 짝수 체력
-            (H % 2 != 0)   # 그 외에는 홀수 체력
+            (H % 2 == 0),
+            (H % 2 != 0)
         )
         
         benefical_hp_rule2 = np.where(
             (H % 2 != 0),
             np.where(
                 is_life_orb,
-                (H % 10 == 9),  # 10n - 1
-                (H % 16 == 15)  # 16n - 1
+                (H % 10 == 9),
+                (H % 16 == 15)
             ),
             True
         )
 
-        # 핵심 로직: 1순위(생존 확률) 만족 조합이 있으면 tier1_mask 사용,
-        # 없으면 가중치 기반 유효 조합 풀(mask & 유효 점수)을 새로운 1순위 베이스로 설정
         if np.any(tier1_mask):
             base_pool = tier1_mask
             applied_tier1 = True
@@ -175,7 +162,6 @@ class PokemonStatOptimizer:
             base_pool = mask & np.isfinite(score)
             applied_tier1 = "미달로 인한 가중치 기반 풀 대체"
 
-        # 2순위 적용 (base_pool 기준)
         tier2_mask = base_pool & benefical_hp_rule1
         if np.any(tier2_mask):
             current_pool_for_3 = tier2_mask
@@ -184,7 +170,6 @@ class PokemonStatOptimizer:
             current_pool_for_3 = base_pool
             applied_tier2 = False
 
-        # 3순위 적용 (current_pool_for_3 기준)
         tier3_mask = current_pool_for_3 & benefical_hp_rule2
         if np.any(tier3_mask):
             final_optimized_mask = tier3_mask
@@ -199,7 +184,6 @@ class PokemonStatOptimizer:
         print(f"3순위(체력 실수치 홀수 조건) 적용 성공 여부: {'성공' if applied_tier3 else '조건 만족 조합 없어 상위 풀 유지'}")
         print(f"최종 조건 만족 스탯 조합 수: {np.sum(final_optimized_mask)}개")
 
-        # 유효한 SP 분배만 점수 계산에 사용
         if np.any(final_optimized_mask):
             min_sp = int(np.min(total_sp[final_optimized_mask]))
             max_sp = int(np.max(total_sp[final_optimized_mask]))
@@ -321,13 +305,10 @@ class PokemonStatOptimizer:
         A01, C01 = base_stats1[1], base_stats1[3]
         H2, B2, D2 = real_stats2[0], real_stats2[2], real_stats2[4]
 
-        # 상대방의 현재 체력 계산 (백분율 기준)
         target_hp = H2 * (current_hp_percent / 100.0)
 
-        # 1. 입력된 기술 인덱스를 리스트로 통일
         move_indices = [int(move_index)] if isinstance(move_index, (int, float)) else list(move_index)
 
-        # 2. 총 데미지 계산 공통 함수 (다단히트 및 연속 기술 조합용)
         def calculate_total_dmg(dmg_matrix, hits_val):
             dmg_matrix = np.array(dmg_matrix)
             if hits_val <= 1:
@@ -343,13 +324,11 @@ class PokemonStatOptimizer:
         dmg_outputs = []
         move_names_str = []
 
-        # 3. 기술 리스트를 순서대로 순회하며 데미지 분포 누적 계산
         for m_idx in move_indices:
             move_name = Move1[m_idx - 1]
             move_names_str.append(move_name)
             atk_move = move_dict.get(move_name)
             
-            # 물리/특수 카테고리 판별 (첫 번째 기술 기준 또는 개별 적용)
             if atk_move.category == "물리":
                 A0, B = A01, B2
             elif atk_move.category == "특수":
@@ -362,22 +341,18 @@ class PokemonStatOptimizer:
             dmg, _ = BattleCalculator(pkm1, pkm2, atk_move).calculate_damage(A, B, H2, rank_a, rank_b, weather, field, crit)
             dmg_output_single = DMGoutput_Bulk_Calculator(pkm1).calculate_dmg_output(A, atk_move, field, weather)
             
-            # 각 기술별 타수 반영 후 리스트에 적재
             move_total_dmg = calculate_total_dmg(dmg, hits)
             sequence_dmg_matrices.append(move_total_dmg)
             dmg_outputs.append(dmg_output_single)
 
-        # 4. 여러 기술(콤보)의 데미지 분포를 순서대로 합산 (Cartesian Sum)
         total_dmg = sequence_dmg_matrices[0]
         for next_dmg in sequence_dmg_matrices[1:]:
             combined = total_dmg[:, None, :] + next_dmg[None, :, :]
             total_dmg = combined.reshape(-1, total_dmg.shape[1])
 
-        # 상대방의 현재 체력(target_hp)을 기준으로 기절(KO) 확률 계산
         ko_probabilities = np.mean(total_dmg >= target_hp, axis=0)
         combined_move_name = " , ".join(move_names_str)
 
-        # 5. 기존 최적화 로직 수행 (단일/다중 공통)
         mask_target = (ko_probabilities >= target_prob / 100.0)
         mask_11n = (A % 11 == 0)
 

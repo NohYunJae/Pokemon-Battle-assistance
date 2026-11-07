@@ -99,39 +99,31 @@ class BattleCalculator:
         for roll in range(85, 101):
             dmg = base_damage
 
-            # 날씨 보정 적용
             if weather_mod != 4096:
                 dmg = (dmg * weather_mod) // 4096
                 
-            # 급소 보정 적용
             if crit_mod != 4096:
                 dmg = (dmg * crit_mod) // 4096
 
-            # 난수 적용 (정수 나눗셈)
             dmg = (dmg * roll) // 100
 
-            # 자속 보정 (STAB)
             if self.attacker.ability == "적응력" and self.move.type in self.attacker.types:
                 dmg = (dmg * 8192) // 4096
             elif self.move.type in self.attacker.types:
                 dmg = (dmg * 6144) // 4096
 
-            # 타입 상성 적용 (단순 소수 곱셈 후 내림)
             type_mod = 1.0
             for t in self.defender.types:
                 type_mod *= type_chart.get(self.move.type, {}).get(t, 1.0)
             dmg = np.floor(dmg * type_mod)
 
             other_mods = []
-            # 1. 멀티스케일,스펙터가드 (HP 100%일 때 받는 데미지 0.5배 = 2048)
             if self.defender.ability in ["멀티스케일", "스펙터가드"] and getattr(self.defender, "hp_percent", 100) == 100:
                 other_mods.append(2048)
 
-            # 2. 생명의구슬
             if self.attacker.item == "생명의구슬":
                 other_mods.append(5325)
 
-            # 3. 달인의띠
             if self.attacker.item == "달인의띠" and type_mod > 1.0:
                 other_mods.append(4915)
 
@@ -246,18 +238,15 @@ class DMGoutput_Bulk_Calculator:
         base_fp = self._base_dmg_output(atk_stat, move, field)
         dmg_output = base_fp
 
-        # 날씨 보정 적용
         if weather_mod != 4096:
             dmg_output = (dmg_output * weather_mod) // 4096
 
-        # 자속 보정 (STAB)
         if self.pkm.ability == "적응력" and move.type in self.pkm.types:
             dmg_output = (dmg_output * 8192) // 4096
         elif move.type in self.pkm.types:
             dmg_output = (dmg_output * 6144) // 4096
 
         other_mods4fp = []
-        # 생명의구슬
         if self.pkm.item == "생명의구슬":
             other_mods4fp.append(5325)
 

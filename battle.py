@@ -52,7 +52,6 @@ class Simulator:
                 
             return table
 
-        # 각 포켓몬의 기술들에 대해 85, 90, 95, 100 난수만 포함된 테이블 생성
         damage_table1 = get_damage_table(pkm1, pkm2, data1["기술"])
         damage_table2 = get_damage_table(pkm2, pkm1, data2["기술"])
         

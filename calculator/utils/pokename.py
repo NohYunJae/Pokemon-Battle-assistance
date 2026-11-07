@@ -657,28 +657,28 @@
 #   "Meloetta": "메로에타",
 #   "Genesect": "게노세크트"
 # }
-import pandas as pd
+# import pandas as pd
 
 # 1. 파일 불러오기
-df1 = pd.read_csv('Pokedex.csv')
-df2 = pd.read_csv('Pokedex_Korean.csv')
+# df1 = pd.read_csv('Pokedex.csv')
+# df2 = pd.read_csv('Pokedex_Korean.csv')
 
-# 2. 첫 번째 열의 이름을 '도감번호'로 지정
-df1 = df1.rename(columns={df1.columns[0]: '도감번호'})
+# # 2. 첫 번째 열의 이름을 '도감번호'로 지정
+# df1 = df1.rename(columns={df1.columns[0]: '도감번호'})
 
-# 3. 원본 데이터에 있던 불필요한 'Unnamed' 빈 열들 제거
-df1 = df1.loc[:, ~df1.columns.str.contains('^Unnamed')]
+# # 3. 원본 데이터에 있던 불필요한 'Unnamed' 빈 열들 제거
+# df1 = df1.loc[:, ~df1.columns.str.contains('^Unnamed')]
 
-# 4. df2(Pokedex_Korean)에서 도감번호 기준 중복 제거 (첫 번째 값 유지)
-df2_unique = df2.drop_duplicates(subset=['도감번호'], keep='first')
+# # 4. df2(Pokedex_Korean)에서 도감번호 기준 중복 제거 (첫 번째 값 유지)
+# df2_unique = df2.drop_duplicates(subset=['도감번호'], keep='first')
 
-# 5. 도감번호를 기준으로 병합
-merged = pd.merge(df1, df2_unique[['도감번호', 'Type1', 'Type2']], on='도감번호', how='left')
+# # 5. 도감번호를 기준으로 병합
+# merged = pd.merge(df1, df2_unique[['도감번호', 'Type1', 'Type2']], on='도감번호', how='left')
 
-# 6. Type1, Type2 열 이름을 각각 '타입1', '타입2'로 깔끔하게 변경
-merged = merged.rename(columns={'Type1': '타입1', 'Type2': '타입2'})
+# # 6. Type1, Type2 열 이름을 각각 '타입1', '타입2'로 깔끔하게 변경
+# merged = merged.rename(columns={'Type1': '타입1', 'Type2': '타입2'})
 
-# 7. 결과 파일 저장 (index=False를 주어야 불필요한 인덱스 열이 생기지 않습니다)
-merged.to_csv('merged_pokedex_clean.csv', index=False, encoding='utf-8-sig')
+# # 7. 결과 파일 저장 (index=False를 주어야 불필요한 인덱스 열이 생기지 않습니다)
+# merged.to_csv('merged_pokedex_clean.csv', index=False, encoding='utf-8-sig')
 
-print("깔끔하게 정리가 완료되었습니다!")
+# print("깔끔하게 정리가 완료되었습니다!")

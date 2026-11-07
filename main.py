@@ -61,7 +61,6 @@ class BTAssistanceApp(ctk.CTk):
         self.tab_button_frame = ctk.CTkFrame(self.card_box, fg_color="transparent")
         self.tab_button_frame.pack(side="left", anchor="n", padx=(10, 5), pady=10)
 
-        # 탭 순서 수정: 배틀 계산기 바로 다음(2번)에 스피드 비교 배치
         tab_info = [
             ("1. 배틀 계산기", "calculator"),
             ("2. 스피드 비교", "spd_calc"),

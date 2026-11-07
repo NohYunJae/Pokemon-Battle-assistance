@@ -157,8 +157,6 @@ class BattleCSVbuilder:
             """리스트가 지정된 길이보다 짧으면 default 값으로 채워서 반환합니다."""
             return list(map(str, lst)) + [default] * (target_len - len(lst))
 
-
-        # 1. 기본 정보 행 정의 (라벨, pkm1 키, pkm2 키)
         simple_fields = [
             ("포켓몬", "포켓몬", "포켓몬"),
             ("날씨", "날씨", "날씨"),

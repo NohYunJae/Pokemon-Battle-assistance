@@ -11,15 +11,12 @@ class CriticalHitManager:
         """
         확정 급소 상태인지 판정 (상대 특성 '전투무장', '조개껍질' 일때 급소불가)
         """
-        # 방어 측 급소 방어 특성
         if self.defender.ability in ["전부무장", "조개껍질"]:
             return False
 
-        # 확정 급소 기술인 경우
         if self.move.name in ALWAYS_CRIT_MOVES:
             return True
 
-        # 급소 랭크 계산 (3단계 이상이면 100% 급소)
         crit_stage = 0
         if self.move.name in HIGH_CRIT_MOVES:
             crit_stage += 1
