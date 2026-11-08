@@ -221,12 +221,11 @@ class TeamAnalyzer:
         }
 
 class PokemonSelector:
-    """파티 보완 포켓몬 추천 클래스"""
+    """파티 보완 포켓몬 추천 클래스 (필터 함수화 및 점수 부여 방식)"""
     def __init__(self):
         self.pochampslst = pochamps_pokemon_list
 
     def recommend_pokemon(self, party_samples):
-        """파티 보완 포켓몬 추천 로직 (1순위: 공통 약점 보완, 2순위: 반감 불가 타입 보완)"""
         analyzer = TeamAnalyzer(party_samples)
         defense_result = analyzer.analyze_party_defense()
         common_weaknesses = defense_result["common_weaknesses"]
@@ -246,9 +245,43 @@ class PokemonSelector:
             if all_fail_to_resist:
                 completely_unresisted_types.add(atk_type)
 
+        # 1단계 필터 함수: 기존 공통 약점 보유 여부 확인 (True면 안전)
+        def eval_filter_1(poke_types):
+            has_weakness = any(
+                analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0 
+                for atk_type in common_weaknesses.keys()
+            )
+            return not has_weakness
+
+        # 2단계 필터 함수: 새로운 공통 약점 유발 여부 확인 (True면 안전)
+        def eval_filter_2(poke_types):
+            for atk_type in all_attack_types:
+                weak_count = sum(
+                    1 for def_types in existing_party_types 
+                    if analyzer._get_type_multiplier(atk_type, def_types) >= 2.0
+                )
+                if analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0:
+                    weak_count += 1
+                if weak_count >= new_threshold:
+                    return False
+            return True
+
+        # 3단계 필터 함수: 치명적 사각지대 약점 보유 여부 확인 (True면 안전)
+        def eval_filter_3(poke_types):
+            has_blindspot_weakness = any(
+                analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0 
+                for atk_type in completely_unresisted_types
+            )
+            return not has_blindspot_weakness
+
         general_recommendations = []
         mega_recommendations = []
         
+        # 가중치 설정 (필터 통과 점수 및 커버 점수)
+        FILTER_PASS_SCORE = 5.0    # 필터 조건을 만족했을 때 주는 안전성 가산점
+        WEIGHT_WEAKNESS = 2.0      # 공통 약점 커버 가중치
+        WEIGHT_NOT_RESISTED = 1.0  # 반감 불가 타입 커버 가중치
+
         for poke_name in self.pochampslst:
             if poke_name not in pokedex_cache:
                 continue
@@ -256,36 +289,18 @@ class PokemonSelector:
             poke_data = pokedex_cache[poke_name]
             poke_types = poke_data.get("types", [])
 
-            has_common_weakness = any(
-                analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0
-                for atk_type in common_weaknesses.keys()
-            )
-            if has_common_weakness:
-                continue
+            # 각 필터 단계별 통과 여부 확인 (True/False)
+            pass_f1 = eval_filter_1(poke_types)
+            pass_f2 = eval_filter_2(poke_types)
+            pass_f3 = eval_filter_3(poke_types)
 
-            introduces_new_common_weakness = False
-            for atk_type in all_attack_types:
-                weak_count = sum(
-                    1 for def_types in existing_party_types
-                    if analyzer._get_type_multiplier(atk_type, def_types) >= 2.0
-                )
-                if analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0:
-                    weak_count += 1
-                
-                if weak_count >= new_threshold:
-                    introduces_new_common_weakness = True
-                    break
-            
-            if introduces_new_common_weakness:
-                continue
+            # 안전성 필터 점수 산정 (많이 만족할수록 높은 점수)
+            safety_score = 0
+            if pass_f1: safety_score += FILTER_PASS_SCORE
+            if pass_f2: safety_score += FILTER_PASS_SCORE
+            if pass_f3: safety_score += FILTER_PASS_SCORE
 
-            has_fatal_blindspot_weakness = any(
-                analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0
-                for atk_type in completely_unresisted_types
-            )
-            if has_fatal_blindspot_weakness:
-                continue
-
+            # 커버리지 계산
             covered_weaknesses = [
                 atk_type for atk_type in common_weaknesses.keys()
                 if analyzer._get_type_multiplier(atk_type, poke_types) < 1.0
@@ -297,13 +312,23 @@ class PokemonSelector:
             ]
 
             total_covered = covered_weaknesses + covered_not_resisted
-            if total_covered:
+            
+            # 파티에 조금이라도 기여할 수 있는 포켓몬인 경우에만 후보에 추가
+            if total_covered or safety_score > 0:
+                weakness_count = len(covered_weaknesses)
+                not_resisted_count = len(covered_not_resisted)
+                
+                # 최종 종합 점수 = 안전성 점수 + (약점 커버 점수) + (반감 불가 커버 점수)
+                total_score = safety_score + (weakness_count * WEIGHT_WEAKNESS) + (not_resisted_count * WEIGHT_NOT_RESISTED)
+
                 item = {
                     "name": poke_name,
                     "types": poke_types,
                     "covered_types": total_covered,
-                    "weakness_score": len(covered_weaknesses),      
-                    "not_resisted_score": len(covered_not_resisted) 
+                    "safety_score": safety_score,
+                    "weakness_score": weakness_count,      
+                    "not_resisted_score": not_resisted_count,
+                    "total_score": total_score
                 }
 
                 if poke_name.startswith("메가") and poke_name != "메가니움":
@@ -311,16 +336,17 @@ class PokemonSelector:
                 else:
                     general_recommendations.append(item)
 
-        sort_key = lambda x: (x["weakness_score"], x["not_resisted_score"], x["name"])
+        # 정렬 기준: 1순위 종합 점수, 2순위 안전성 점수, 3순위 이름
+        sort_key = lambda x: (x["total_score"], x["safety_score"], x["name"])
         
         general_recommendations.sort(key=sort_key, reverse=True)
         mega_recommendations.sort(key=sort_key, reverse=True)
         
-        return general_recommendations[:50], mega_recommendations[:50], common_weaknesses, common_not_resisted
+        return general_recommendations[:10], mega_recommendations, common_weaknesses, common_not_resisted
 
 
 def test_recommend(test_samples):
-    """방어 보완 포켓몬 추천 테스트 함수"""
+    """방어 보완 포켓몬 추천 테스트 함수 (소프트 스코어링 점수 반영)"""
     print("=== [방어 보완 포켓몬 추천 및 파티 취약 타입 분석 테스트] ===")
     try:
         selector = PokemonSelector()
@@ -346,9 +372,10 @@ def test_recommend(test_samples):
             for idx, item in enumerate(general_top50, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
-                c_types = ', '.join(item["covered_types"])
+                c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
                 print(f"  {idx:2d}. [{p_name}] (방어 타입: {p_types})")
-                print(      f"      🛡️ 보완한 취약 타입: {c_types} (공통약점 보완: {item['weakness_score']}개 / 반감불가 보완: {item['not_resisted_score']}개)")
+                print(      f"      🛡️ 보완한 취약 타입: {c_types}")
+                print(      f"      📊 점수 내역: 종합 총점: {item['total_score']:.1f}점 (안전성 점수: {item['safety_score']}점 / 공통약점 커버: {item['weakness_score']}개 / 반감불가 커버: {item['not_resisted_score']}개)")
                 print("-" * 75)
         else:
             print("  - 조건을 만족하는 일반 포켓몬이 없습니다.")
@@ -358,16 +385,16 @@ def test_recommend(test_samples):
             for idx, item in enumerate(mega_top50, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
-                c_types = ', '.join(item["covered_types"])
+                c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
                 print(f"  {idx:2d}. [{p_name}] (방어 타입: {p_types})")
-                print(      f"      🛡️ 보완한 취약 타입: {c_types} (공통약점 보완: {item['weakness_score']}개 / 반감불가 보완: {item['not_resisted_score']}개)")
+                print(      f"      🛡️ 보완한 취약 타입: {c_types}")
+                print(      f"      📊 점수 내역: 종합 총점: {item['total_score']:.1f}점 (안전성 점수: {item['safety_score']}점 / 공통약점 커버: {item['weakness_score']}개 / 반감불가 커버: {item['not_resisted_score']}개)")
                 print("-" * 75)
         else:
             print("  - 조건을 만족하는 메가진화 포켓몬이 없습니다.")
             
     except Exception as e:
         print(f"\n❌ 에러 발생: {e}")
-
 
 def test_offense(test_samples):
     """공격 상성 분석 테스트 함수"""
@@ -411,12 +438,11 @@ def test_offense(test_samples):
 
 if __name__ == "__main__":
     test_samples = [
-        "트릭룸카디나르마", 
-        "스카프에써르", 
+        "트릭룸카디나르마",
         "트릭룸메갑주",
-        "HD하마돈샘플",
-        "배북마릴리",
-        "용춤날쉬보만다"
+        "스카프삼삼드래",
+        "조심누리레느",
+        "HD하마돈샘플"
     ]
-    test_recommend(test_samples)
+    # test_recommend(test_samples)
     test_offense(test_samples)

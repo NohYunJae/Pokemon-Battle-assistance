@@ -320,7 +320,7 @@ class SampleView:
         ctk.CTkLabel(moves_inner, text="기술 세팅:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=10)).pack(side="left", padx=2)
         
         self.entry_moves = []
-        for i, dm in enumerate(["10만볼트", "볼트체인지", "잠재파워", "방어"]):
+        for i, dm in enumerate(["10만볼트", "볼트체인지", "풀묶기", "파도타기"]):
             e = AutoCompleteEntry(moves_inner, suggestions=self.move_list, width=68)
             e.pack(side="left", padx=1)
             e.set(dm)
