@@ -363,7 +363,7 @@ class SampleView:
             self.pending_sample_data = {
                 "filename": filename, "name": name, "note": note, "item": item,
                 "ability": ability, "nature": nature, "level": level,
-                "SPs": SPs, "IVs": IVs, "moves": moves, "weather": weather, "field": field
+                "SPs": SPs, "IVs": IVs, "moves": moves, "weather": weather, "field": field, "status": status
             }
 
             self.log_box.insert("end", f"[미리보기] '{name}' 샘플 미리보기 생성됨. 저장 여부를 선택하세요.\n")
@@ -433,6 +433,7 @@ class SampleView:
                 ["실수치"] + pkm.stats,
                 ["날씨", weather or ""],
                 ["필드", field or ""],
+                ["상태이상", status or ""],
                 ["기술"] + moves,
                 ["DMG"] + damages,
                 ["", "물리", "특수"],
@@ -467,8 +468,8 @@ class SampleView:
         try:
             d = self.pending_sample_data
             saved_path = SampleCSVbuilder.make_sample_csv(
-                d["filename"], d["name"], d["note"], d["item"], d["ability"], 
-                d["nature"], d["level"], d["SPs"], d["IVs"], d["moves"], d["weather"], d["field"]
+                d["filename"], d["name"], d["note"], d["item"], d["ability"], d["nature"], d["level"],
+                d["SPs"], d["IVs"], d["moves"], d["weather"], d["field"], d["status"]
             )
             self.log_box.insert("end", f"[성공] 파일 저장 완료: {os.path.basename(saved_path)}\n")
             self.log_box.see("end")

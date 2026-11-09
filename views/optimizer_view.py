@@ -189,6 +189,28 @@ class OptimizerView:
             {"type": "max", "SPs": [32, 32, 32, 32, 32, 32]}
         ]
 
+    def _update_remaining_sp_entries(self):
+        """총 SP 66 제한 및 각 스탯 최대 32 한도를 고려하여 사용 가능 SP란에 남은 SP 자동 반영"""
+        try:
+            used_total_sp = sum(self.latest_optimized_sp.get(k, 0) for k in ["H", "A", "B", "C", "D", "S"])
+            remaining_total_sp = max(0, 66 - used_total_sp)
+
+            if hasattr(self, 'speed_sp_av'):
+                rem_s = min(32, remaining_total_sp)
+                self.speed_sp_av.delete(0, "end")
+                self.speed_sp_av.insert(0, str(rem_s))
+
+            if hasattr(self, 'power_sp_av'):
+                rem_p = min(32, remaining_total_sp)
+                self.power_sp_av.delete(0, "end")
+                self.power_sp_av.insert(0, str(rem_p))
+
+            if hasattr(self, 'bulk_av_sp'):
+                self.bulk_av_sp.delete(0, "end")
+                self.bulk_av_sp.insert(0, str(remaining_total_sp))
+        except Exception:
+            pass
+
     def setup_speed_tab(self, parent):
         scroll_f = ctk.CTkScrollableFrame(parent, fg_color="transparent", width=280, height=400)
         scroll_f.pack(fill="both", expand=True, padx=2, pady=2)
@@ -298,13 +320,11 @@ class OptimizerView:
         self.power_target_prob.grid(row=10, column=1, sticky="ew", pady=3)
         self.power_target_prob.insert(0, "100")
 
-        # [수정] 공격자(내 포켓몬) 상태이상
         ctk.CTkLabel(scroll_f, text="공격자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_status_a = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_status_a.grid(row=11, column=1, sticky="ew", pady=3)
         self.power_status_a.set("")
 
-        # [수정] 방어자(상대 포켓몬) 상태이상
         ctk.CTkLabel(scroll_f, text="방어자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_status_b = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_status_b.grid(row=12, column=1, sticky="ew", pady=3)
@@ -421,13 +441,11 @@ class OptimizerView:
         self.bulk_tg_prob.grid(row=14, column=1, sticky="ew", pady=3)
         self.bulk_tg_prob.insert(0, "100")
 
-        # [수정] 공격자(상대 포켓몬) 상태이상
         ctk.CTkLabel(scroll_f, text="공격자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_status_a = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_status_a.grid(row=15, column=1, sticky="ew", pady=3)
         self.bulk_status_a.set("")
 
-        # [수정] 방어자(내 포켓몬) 상태이상
         ctk.CTkLabel(scroll_f, text="방어자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_status_b = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_status_b.grid(row=16, column=1, sticky="ew", pady=3)
@@ -594,7 +612,6 @@ class OptimizerView:
             hits = int(self.power_hits.get().strip() or "1")
             target_prob = float(self.power_target_prob.get().strip() or "16")
             
-            # [수정] 공격자 및 방어자 상태이상을 리스트로 구성
             status_a = self.power_status_a.get().strip() or None
             status_b = self.power_status_b.get().strip() or None
             status = [status_a, status_b]
@@ -676,7 +693,6 @@ class OptimizerView:
             tgp = int(self.bulk_tg_prob.get().strip() or "100")
             hits = int(self.bulk_hits.get().strip() or "1")
             
-            # [수정] 공격자(상대) 및 방어자(내 포켓몬) 상태이상을 리스트로 구성
             status_a = self.bulk_status_a.get().strip() or None
             status_b = self.bulk_status_b.get().strip() or None
             status = [status_a, status_b]
@@ -756,6 +772,8 @@ class OptimizerView:
                 for stat, entry in self.manual_sp_entries.items():
                     entry.delete(0, "end")
                     entry.insert(0, str(self.latest_optimized_sp.get(stat, 0)))
+
+                self._update_remaining_sp_entries()
                 break
 
     def regenerate_sample_file(self):
@@ -795,6 +813,7 @@ class OptimizerView:
             ivs = p1_data.get("IVs", [31, 31, 31, 31, 31, 31])
             moves = p1_data.get("기술", [])
             weather = p1_data.get("날씨", "")
+            status = p1_data.get("상태이상", "")
             
             updated_SPs = [h_sp, a_sp, b_sp, c_sp, d_sp, s_sp]
 
@@ -809,12 +828,14 @@ class OptimizerView:
                 SPs=updated_SPs,
                 IVs=ivs,
                 moves=moves,
-                weather=weather
+                weather=weather,
+                status=status
             )
 
             print(f"\n[성공] 샘플 파일이 성공적으로 재생성 및 저장되었습니다!\n→ 경로: {saved_path}")
             print(f"적용된 SP = H:{h_sp}, A:{a_sp}, B:{b_sp}, C:{c_sp}, D:{d_sp}, S:{s_sp}")
 
+            self._update_remaining_sp_entries()
             self.refresh_samples()
 
         except Exception as e:

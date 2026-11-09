@@ -119,6 +119,8 @@ class PokemonCSVLoader:
           data["종족치"] = list(map(lambda x: int(float(x)), row[1:]))
         elif key == "실수치":
           data["실수치"] = list(map(int, row[1:]))
+        elif key == "상태이상":
+          data["상태이상"] = row[1]
 
     return data
 
