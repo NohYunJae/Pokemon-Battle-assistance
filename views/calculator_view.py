@@ -628,21 +628,19 @@ class CalculatorView(ctk.CTkFrame):
             self.result_textbox.insert("0.1", result_text)
             self.result_textbox.configure(state="disabled")
 
-        # except Exception as e:
-        #     err_msg = f"⏳ [입력 대기 중] 올바른 포켓몬 이름과 수치를 입력해주세요.\n(세부 오류: {str(e)})"
-        #     self.result_textbox.configure(state="normal")
-        #     self.result_textbox.delete("0.1", "end")
-        #     self.result_textbox.insert("0.1", err_msg)
-        #     self.result_textbox.configure(state="disabled")
         except Exception as e:
-            import traceback
+            err_msg = f"⏳ [입력 대기 중] 올바른 포켓몬 이름과 수치를 입력해주세요.\n(세부 오류: {str(e)})"
+            self.result_textbox.configure(state="normal")
+            self.result_textbox.delete("0.1", "end")
+            self.result_textbox.insert("0.1", err_msg)
+            self.result_textbox.configure(state="disabled")
 
-            # 에러가 난 파일명, 줄 번호, 함수명 등을 포함한 상세 추적 문자열 생성
-            error_traceback = traceback.format_exc()
-
-            err_msg = (
-                f"❌ [에러 발생]\n{error_traceback}"  # 상세한 줄 번호 포함
-            )
+        # except Exception as e:
+        #     import traceback
+        #     error_traceback = traceback.format_exc()
+        #     err_msg = (
+        #         f"❌ [에러 발생]\n{error_traceback}"  # 상세한 줄 번호 포함
+        #     )
 
             self.result_textbox.configure(state="normal")
             self.result_textbox.delete("0.1", "end")
