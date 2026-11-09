@@ -341,7 +341,7 @@ class PokemonStatOptimizer:
             A = np.floor((A0 + A_sp + 20) * nature_modifier)
 
             dmg, _ = BattleCalculator(pkm1, pkm2, atk_move).calculate_damage(A, B, H2, rank_a, rank_b, weather, field, crit, status)
-            dmg_output_single = DMGoutput_Bulk_Calculator(pkm1).calculate_dmg_output(A, atk_move, field, weather, status)
+            dmg_output_single = DMGoutput_Bulk_Calculator(pkm1, atk_move).calculate_dmg_output(A, field, weather, status)
             
             move_total_dmg = calculate_total_dmg(dmg, hits)
             sequence_dmg_matrices.append(move_total_dmg)

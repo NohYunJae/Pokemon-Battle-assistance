@@ -88,12 +88,15 @@ class BattleCalculator:
             if "바위" in self.defender.type and self.move.type == "특수":
                 def_stat = def_stat * 3 // 2
 
+        if self.move.name == "바디프레스":
+            atk_stat = self.attacker.stats[2]
+
         status_a, status_b = status
         base_damage = self._base_damage(atk_stat, def_stat, rank_a, rank_b, field, status_a, status_b)
         damages = []
         percentages = []
 
-        crit = CriticalHitManager(self.attacker,self.defender,self.move)
+        crit = CriticalHitManager(self.attacker, self.defender, self.move)
         critical = crit.is_always_critical()
 
         for roll in range(85, 101):
@@ -181,30 +184,40 @@ class BattleCalculator:
         return speed_a, speed_b
 
 class DMGoutput_Bulk_Calculator:
-    def __init__(self, pkm):
+    def __init__(self, pkm, move):
         self.pkm = pkm
+        self.move = move
 
-    def _base_dmg_output(self, atk_stat, move, field = None, status = None):
+    def _base_dmg_output(self, atk_stat, move, field = None, status = None, rank_a = 0):
+        def calculate_ranked_stat(base_stat: int, rank: int) -> int:
+            if not -6 <= rank <= 6:
+                raise ValueError("랭크는 -6에서 +6 사이여야 합니다.")
+            if rank >= 0:
+                return (base_stat * (2 + rank)) // 2
+            else:
+                return (base_stat * 2) // (2 + abs(rank))
+
         power = move.power
-
+        atk_stat = calculate_ranked_stat(atk_stat, rank_a)
+        
         powrmods = Power_modifiers(self.pkm, move)
         ability_mod, move.type, atk_stat, power = powrmods.ability_mods(atk_stat, status)
         f_ability_mod, move.type, power = powrmods.field_mods(field=field)
-        item_power_mod, atk_stat_mod = powrmods.item_mods(atk_stat)
+        item_power_mod, final_atk_stat = powrmods.item_mods(atk_stat)
 
         power = int(power * f_ability_mod)
         power = int(power * ability_mod)
         power = int(power * item_power_mod)
         power = max(1, power)
 
-        fp_bs = atk_stat_mod * power
+        fp_bs = final_atk_stat * power
 
         if move.category == "변화":
             fp_bs = 0
 
         return fp_bs
     
-    def calculate_dmg_output(self, atk_stat, move, field = None, weather = None, status = None):
+    def calculate_dmg_output(self, atk_stat, field = None, weather = None, status = None, rank_a = 0):
         def apply_pokerng_rounding(acc: int, numerator: int) -> int:
             """
             PokeRNG 반올림 연산 규칙: (acc * numerator + 2048) // 4096
@@ -232,24 +245,27 @@ class DMGoutput_Bulk_Calculator:
         
         weather_mod = 1.0
         if weather == "비":
-            if move.type == "물": weather_mod = 1.5
-            elif move.type == "불꽃": weather_mod = 0.5
+            if self.move.type == "물": weather_mod = 1.5
+            elif self.move.type == "불꽃": weather_mod = 0.5
         elif weather == "쾌청":
-            if move.type == "불꽃": weather_mod = 1.5
-            elif move.type == "물": weather_mod = 0.5
+            if self.move.type == "불꽃": weather_mod = 1.5
+            elif self.move.type == "물": weather_mod = 0.5
 
-        base_fp = self._base_dmg_output(atk_stat, move, field, status)
+        if self.move.name == "바디프레스":
+            atk_stat = self.pkm.stats[2]
+
+        base_fp = self._base_dmg_output(atk_stat, self.move, field, status, rank_a)
         dmg_output = base_fp
 
         if weather_mod != 1.0:
             dmg_output = int(dmg_output * weather_mod)
 
-        if self.pkm.ability == "적응력" and move.type in self.pkm.types:
+        if self.pkm.ability == "적응력" and self.move.type in self.pkm.types:
             dmg_output = dmg_output * 2
-        elif move.type in self.pkm.types:
+        elif self.move.type in self.pkm.types:
             dmg_output = (dmg_output * 3) // 2
 
-        if status == "화상" and move.category == "물리":
+        if status == "화상" and self.move.category == "물리":
             if not self.pkm.ability == "근성":
                 dmg_output = dmg_output // 2
 
@@ -261,24 +277,42 @@ class DMGoutput_Bulk_Calculator:
         
         return dmg_output
 
-    def calculate_bulk(self, H, B, D, weather, status):
+    def calculate_bulk(self, H, B, D, weather, status, rank_b = 0):
         def has_status(status):
             return bool(status)
-        
+            
+        def calculate_ranked_stat(base_stat: int, rank: int) -> int:
+            if not -6 <= rank <= 6:
+                raise ValueError("랭크는 -6에서 +6 사이여야 합니다.")
+            if rank >= 0:
+                return (base_stat * (2 + rank)) // 2
+            else:
+                return (base_stat * 2) // (2 + abs(rank))
+
+        if self.move.category == "물리":
+            rank_b_ = rank_b
+            rank_d = 0
+        elif self.move.category == "특수":
+            rank_d = rank_b
+            rank_b_ = 0
+
+        ranked_B = calculate_ranked_stat(B, rank_b_)
+        ranked_D = calculate_ranked_stat(D, rank_d)
+
         if weather == "눈":
             if "얼음" in self.pkm.type:
-                B = B * 6144 // 4096
+                ranked_B = ranked_B * 3 // 2
         elif weather == "모래바람":
             if "바위" in self.pkm.type:
-                D = D * 6144 // 4096
+                ranked_D = ranked_D * 3 // 2
 
         if self.pkm.item == "돌격조끼":
-            D = D * 6144 // 4096
+            ranked_D = ranked_D * 3 // 2
 
         if self.pkm.ability == "이상한비늘" and has_status(status):
-            B = B * 3 // 2
+            ranked_B = ranked_B * 3 // 2
 
-        physical_bulk = int(H * B / 0.411)
-        special_bulk = int(H * D / 0.411)
+        physical_bulk = int(H * ranked_B / 0.411)
+        special_bulk = int(H * ranked_D / 0.411)
 
         return physical_bulk, special_bulk

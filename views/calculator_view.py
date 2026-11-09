@@ -3,6 +3,7 @@ import customtkinter as ctk
 import tkinter as tk
 import threading
 
+from pokemon import Pokemon
 from calculator.PBTcalculator import BattleCalculator, DMGoutput_Bulk_Calculator
 from calculator.stats import get_pokemon_stats
 from .utils.cache_manager import GameDataCache
@@ -485,7 +486,7 @@ class CalculatorView(ctk.CTkFrame):
             atk_nature = self.atk_nature_combo.get().strip()
             atk_val_str = self.atk_sp_entry.get().strip()
             atk_sp_val = min(max(int(atk_val_str) if atk_val_str.isdigit() else 0, 0), 32)
-            
+            move_name = self.move_name_combo_widget.get().strip()
             atk_rank_str = self.atk_rank_entry.get().strip()
             try:
                 rank_a = int(atk_rank_str) if atk_rank_str else 0
@@ -496,8 +497,10 @@ class CalculatorView(ctk.CTkFrame):
             atk_SPs = [0, 0, 0, 0, 0, 0]
             if cat == "특수":
                 atk_SPs[3] = atk_sp_val
-            else:
+            elif cat == "물리":
                 atk_SPs[1] = atk_sp_val
+            if move_name == "바디프레스":
+                atk_SPs[2] = atk_sp_val
 
             atk_stats, _ = get_pokemon_stats(atk_name, atk_nature, atk_SPs)
             atk_stat = atk_stats[3] if cat == "특수" else atk_stats[1]
@@ -533,8 +536,6 @@ class CalculatorView(ctk.CTkFrame):
             atk_ability = self.atk_ability_entry.get().strip()
             def_item = self.def_item_entry.get().strip()
             def_ability = self.def_ability_entry.get().strip()
-
-            move_name = self.move_name_combo_widget.get().strip()
             
             power_str = self.move_power_entry.get().strip()
             move_power = int(power_str) if power_str.isdigit() else 85
@@ -561,17 +562,14 @@ class CalculatorView(ctk.CTkFrame):
 
             crit = self.crit_var.get()
 
-            atk_types = self._get_types_from_cache(atk_name)
-            def_types = self._get_types_from_cache(def_name)
-
             move_obj_data = self.move_dict.get(move_name, {})
             contact_val = True if move_obj_data.get("contact") == "o" else False
 
-            attacker = DummyObject(
-                name=atk_name, item=atk_item, ability=atk_ability, types=atk_types, hp_percent=100
+            attacker = Pokemon(
+                name=atk_name, nature=atk_nature, SPs=atk_SPs, IVs=[31] * 6, item=atk_item, ability=atk_ability
             )
-            defender = DummyObject(
-                name=def_name, item=def_item, ability=def_ability, types=def_types, hp_percent=100
+            defender = Pokemon(
+                name=def_name, nature=def_nature, SPs=def_SPs, IVs=[31] * 6, item=def_item, ability=def_ability
             )
             move = DummyObject(
                 name=move_name, power=move_power, type=move_type, category=cat, contact=contact_val
@@ -583,11 +581,11 @@ class CalculatorView(ctk.CTkFrame):
                 weather=weather, field=field, critical=crit, status=status
             )
 
-            dmg_output_calc = DMGoutput_Bulk_Calculator(attacker)
-            dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, move, field, weather, atk_status)
+            dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
+            dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
 
-            bulk_calc = DMGoutput_Bulk_Calculator(defender)
-            phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, def_status)
+            bulk_calc = DMGoutput_Bulk_Calculator(defender, move)
+            phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, def_status, rank_b)
 
             min_dmg, max_dmg = damages[0], damages[-1]
             min_pct, max_pct = percentages[0], percentages[-1]

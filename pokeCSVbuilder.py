@@ -76,7 +76,7 @@ class SampleCSVbuilder:
             fpower = pkm.calculate_DMG_output(move, field, weather, status)
             damages.append(fpower)
 
-        bulk = pkm.calculate_bulk(weather, status)
+        bulk = pkm.calculate_bulk(move, weather, status)
         if pkm.item == "구애스카프":
             spd = pkm.stats[5] * 3 // 2
         elif pkm.ability == "곡예":

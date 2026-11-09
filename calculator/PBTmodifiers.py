@@ -35,7 +35,9 @@ class Power_modifiers:
     def ability_mods(self, atk_stat, status):
         def has_status(status):
             return bool(status)
-            
+        
+        ability_mod = 1
+
         if self.pkm.ability == "단단한발톱" and self.move.contact:
             ability_mod = 1.3
 
@@ -83,9 +85,6 @@ class Power_modifiers:
 
         if self.move.name == "객기" and has_status(status):
             self.move.power = 140
-            ability_mod = 1
-
-        else:
             ability_mod = 1
 
         return ability_mod, self.move.type, atk_stat, self.move.power
