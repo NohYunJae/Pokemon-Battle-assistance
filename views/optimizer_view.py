@@ -298,28 +298,40 @@ class OptimizerView:
         self.power_target_prob.grid(row=10, column=1, sticky="ew", pady=3)
         self.power_target_prob.insert(0, "100")
 
-        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
+        # [수정] 공격자(내 포켓몬) 상태이상
+        ctk.CTkLabel(scroll_f, text="공격자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_status_a = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.power_status_a.grid(row=11, column=1, sticky="ew", pady=3)
+        self.power_status_a.set("")
+
+        # [수정] 방어자(상대 포켓몬) 상태이상
+        ctk.CTkLabel(scroll_f, text="방어자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.power_status_b = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.power_status_b.grid(row=12, column=1, sticky="ew", pady=3)
+        self.power_status_b.set("")
+
+        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.power_weather.grid(row=11, column=1, sticky="ew", pady=3)
+        self.power_weather.grid(row=13, column=1, sticky="ew", pady=3)
         self.power_weather.set("")
 
-        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=12, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.power_field.grid(row=12, column=1, sticky="ew", pady=3)
+        self.power_field.grid(row=14, column=1, sticky="ew", pady=3)
         self.power_field.set("")
 
-        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=13, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.power_sp_av.grid(row=13, column=1, sticky="ew", pady=3)
+        self.power_sp_av.grid(row=15, column=1, sticky="ew", pady=3)
         self.power_sp_av.insert(0, "32")
 
-        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=14, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_crit_var = ctk.BooleanVar(value=False)
         self.power_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.power_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.power_crit_chk.grid(row=14, column=1, sticky="w", pady=3)
+        self.power_crit_chk.grid(row=16, column=1, sticky="w", pady=3)
 
         btn = ctk.CTkButton(scroll_f, text="결정력 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_power_optimization)
-        btn.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(10, 5), padx=2)
+        btn.grid(row=17, column=0, columnspan=2, sticky="ew", pady=(10, 5), padx=2)
 
     def setup_bulk_tab(self, parent):
         scroll_f = ctk.CTkScrollableFrame(parent, fg_color="transparent", width=280, height=400)
@@ -385,9 +397,9 @@ class OptimizerView:
         self.bulk_rank_b.insert(0, "0")
 
         ctk.CTkLabel(scroll_f, text="남은 체력(%):", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=10, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_target_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.bulk_target_hp.grid(row=10, column=1, sticky="ew", pady=3)
-        self.bulk_target_hp.insert(0, "0")
+        self.bulk_current_hp = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.bulk_current_hp.grid(row=10, column=1, sticky="ew", pady=3)
+        self.bulk_current_hp.insert(0, "100")
 
         ctk.CTkLabel(scroll_f, text="물리 가중치:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=11, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_w_def = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
@@ -409,23 +421,35 @@ class OptimizerView:
         self.bulk_tg_prob.grid(row=14, column=1, sticky="ew", pady=3)
         self.bulk_tg_prob.insert(0, "100")
 
-        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
+        # [수정] 공격자(상대 포켓몬) 상태이상
+        ctk.CTkLabel(scroll_f, text="공격자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=15, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_status_a = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.bulk_status_a.grid(row=15, column=1, sticky="ew", pady=3)
+        self.bulk_status_a.set("")
+
+        # [수정] 방어자(내 포켓몬) 상태이상
+        ctk.CTkLabel(scroll_f, text="방어자 상태이상:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
+        self.bulk_status_b = ctk.CTkComboBox(scroll_f, values=["", "마비", "화상", "독", "맹독", "수면", "얼음"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.bulk_status_b.grid(row=16, column=1, sticky="ew", pady=3)
+        self.bulk_status_b.set("")
+
+        ctk.CTkLabel(scroll_f, text="날씨:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=17, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_weather = ctk.CTkComboBox(scroll_f, values=["", "쾌청", "비", "눈", "모래바람"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.bulk_weather.grid(row=15, column=1, sticky="ew", pady=3)
+        self.bulk_weather.grid(row=17, column=1, sticky="ew", pady=3)
         self.bulk_weather.set("")
 
-        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=16, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="필드:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=18, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_field = ctk.CTkComboBox(scroll_f, values=["", "일레트릭필드", "그래스필드", "사이코필드", "미스트필드"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.bulk_field.grid(row=16, column=1, sticky="ew", pady=3)
+        self.bulk_field.grid(row=18, column=1, sticky="ew", pady=3)
         self.bulk_field.set("")
 
-        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=17, column=0, sticky="w", pady=3, padx=(2, 8))
+        ctk.CTkLabel(scroll_f, text="급소 여부:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=19, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_crit_var = ctk.BooleanVar(value=False)
         self.bulk_crit_chk = ctk.CTkCheckBox(scroll_f, text="급소", variable=self.bulk_crit_var, fg_color="#ef4444", hover_color="#dc2626", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
-        self.bulk_crit_chk.grid(row=17, column=1, sticky="w", pady=3)
+        self.bulk_crit_chk.grid(row=19, column=1, sticky="w", pady=3)
 
         btn = ctk.CTkButton(scroll_f, text="내구 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_bulk_optimization)
-        btn.grid(row=18, column=0, columnspan=2, sticky="ew", pady=(15, 5), padx=2)
+        btn.grid(row=20, column=0, columnspan=2, sticky="ew", pady=(15, 5), padx=2)
 
     def add_power_skill(self):
         move = self.power_move_input.get().strip()
@@ -569,6 +593,12 @@ class OptimizerView:
             current_hp_percent = float(self.power_current_hp.get().strip() or "100")
             hits = int(self.power_hits.get().strip() or "1")
             target_prob = float(self.power_target_prob.get().strip() or "16")
+            
+            # [수정] 공격자 및 방어자 상태이상을 리스트로 구성
+            status_a = self.power_status_a.get().strip() or None
+            status_b = self.power_status_b.get().strip() or None
+            status = [status_a, status_b]
+
             weather = self.power_weather.get().strip() or None
             field = self.power_field.get().strip() or None
             sp_av = int(self.power_sp_av.get().strip() or "32")
@@ -580,7 +610,7 @@ class OptimizerView:
             
             result = optimizer.optimize_power_advanced(
                 p1_data, p2_data, move_indices, nature_a, rank_a, rank_b, 
-                hits, target_prob, weather, field, crit_a, sp_av, current_hp_percent
+                hits, target_prob, weather, field, crit_a, status, sp_av, current_hp_percent
             )
             
             self.optimization_choices = ["무보정 (SP = 0)", f"남은 스탯 전부 투자 (SP = {sp_av})"]
@@ -639,12 +669,18 @@ class OptimizerView:
             nd = float(self.bulk_nature_d.get().strip() or "1.0")
             ra = int(self.bulk_rank_a.get().strip() or "0")
             rb = int(self.bulk_rank_b.get().strip() or "0")
-            thp = float(self.bulk_target_hp.get().strip() or "0")
+            curhp = float(self.bulk_current_hp.get().strip() or "0")
 
             w_def = float(self.bulk_w_def.get().strip() or "0.5")
             w_spdef = float(self.bulk_w_spdef.get().strip() or "0.5")
             tgp = int(self.bulk_tg_prob.get().strip() or "100")
             hits = int(self.bulk_hits.get().strip() or "1")
+            
+            # [수정] 공격자(상대) 및 방어자(내 포켓몬) 상태이상을 리스트로 구성
+            status_a = self.bulk_status_a.get().strip() or None
+            status_b = self.bulk_status_b.get().strip() or None
+            status = [status_a, status_b]
+
             weather = self.bulk_weather.get().strip() or None
             field = self.bulk_field.get().strip() or None
             crit_b = bool(self.bulk_crit_var.get())
@@ -654,7 +690,7 @@ class OptimizerView:
             optimizer = PokemonStatOptimizer()
             results = optimizer.optimize_bulk_advanced(
                 p1_data, p2_data, move_indices, av_sp, nb, nd,
-                ra, rb, thp, w_def, w_spdef, tgp, hits, weather, field, crit_b
+                ra, rb, curhp, w_def, w_spdef, tgp, hits, weather, field, crit_b, status
             )
             
             self.optimization_choices = ["무보정 (SP = 0)", f"남은 스탯 전부 투자 (H분배 SP = {av_sp})"]
