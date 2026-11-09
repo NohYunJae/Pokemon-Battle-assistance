@@ -42,7 +42,7 @@ class Simulator:
                 
                 def_hp = defender.get_stat("HP")
                 
-                damages, per_damages = calculator.calculate_damage(atk_stat, def_stat, def_hp, weather=data1.get("날씨"), field=data1.get("필드"))
+                damages, per_damages = calculator.calculate_damage(atk_stat, def_stat, def_hp, weather=data1.get("날씨"), field=data1.get("필드"), status=data1.get("상태이상"))
                 
                 key_indices = [0, 5, 10, 15]
                 filtered_damages = [damages[i] for i in key_indices]

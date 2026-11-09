@@ -32,7 +32,10 @@ class Power_modifiers:
         self.pkm = pkm
         self.move = move
 
-    def ability_mods(self):
+    def ability_mods(self, atk_stat, status):
+        def has_status(status):
+            return bool(status)
+            
         if self.pkm.ability == "단단한발톱" and self.move.contact:
             ability_mod = 1.3
 
@@ -74,10 +77,18 @@ class Power_modifiers:
         elif self.pkm.ability == "천하장사" and self.move.category == "물리":
             ability_mod = 2
 
+        elif self.pkm.ability == "근성" and has_status(status) and self.move.category == "물리":
+            ability_mod = 1
+            atk_stat = atk_stat * 3 // 2
+
+        if self.move.name == "객기" and has_status(status):
+            self.move.power = 140
+            ability_mod = 1
+
         else:
             ability_mod = 1
 
-        return ability_mod, self.move.type
+        return ability_mod, self.move.type, atk_stat, self.move.power
     
     def field_mods(self, field):
         is_airborne = (
@@ -166,7 +177,10 @@ class Bulk_modifiers:
         self.defender = defender
         self.move = move
 
-    def ability_mods(self):
+    def ability_mods(self, status, def_stat):
+        def has_status(status):
+            return bool(status)
+        
         if self.defender.ability == "두꺼운지방" and self.move.type in ["얼음", "불꽃"]:
             ability_mod = 0.5
        
@@ -176,10 +190,21 @@ class Bulk_modifiers:
         elif self.defender.ability == "부유" and self.move.type == "땅":
             ability_mod = 0
 
+        elif self.defender.ability == "저수" and self.move.type == "물":
+            ability_mod  = 0
+
+        elif (
+            self.defender.ability == "이상한비늘"
+            and has_status(status)
+            and self.move.category == "물리"
+        ):
+            def_stat = def_stat * 3 // 2
+            ability_mod = 1
+
         else:
             ability_mod = 1
 
-        return ability_mod
+        return ability_mod, def_stat
 
     def item_mods(self, def_stat):
         if self.defender.item == "돌격조끼" and self.move.category == "특수":

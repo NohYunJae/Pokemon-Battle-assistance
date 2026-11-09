@@ -260,7 +260,8 @@ class SampleView:
             [("파일명:", "entry_filename", "pikachu_sample", ctk.CTkEntry, None), ("포켓몬 이름:", "entry_name", "피카츄", AutoCompleteEntry, self.pokemon_list)],
             [("지닌도구:", "entry_item", "전기구슬", ctk.CTkEntry, None), ("특성:", "entry_ability", "피뢰침", ctk.CTkEntry, None)],
             [("성격:", "entry_nature", "겁쟁이", ctk.CTkEntry, None), ("날씨:", "combo_weather", ["", "쾌청", "비", "눈", "모래바람"], "combo", None)],
-            [("노트:", "entry_note", "GUI 생성 샘플", ctk.CTkEntry, None), ("필드:", "combo_field", ["", "일렉트릭필드", "그래스필드", "사이코필드", "미스트필드"], "combo", None)]
+            [("노트:", "entry_note", "GUI 생성 샘플", ctk.CTkEntry, None), ("상태이상:", "combo_status", ["", "화상", "독", "마비", "수면", "얼음", "맹독"], "combo", None)],
+            [("필드:", "combo_field", ["", "일렉트릭필드", "그래스필드", "사이코필드", "미스트필드"], "combo", None)]
         ]
 
         for r, row_items in enumerate(fields):
@@ -355,6 +356,7 @@ class SampleView:
             IVs = [int(e.get().strip()) for e in self.entry_ivs]
             moves = [e.get().strip() for e in self.entry_moves if e.get().strip()]
             weather = self.combo_weather.get().strip() or None
+            status = self.combo_status.get().strip() or None
             field = self.combo_field.get().strip() or None
 
             # 저장에 필요한 데이터를 임시 보관
@@ -389,10 +391,10 @@ class SampleView:
                         self.power = d.get("power", 0)
                         self.contact = d.get("contact", "x")
                 
-                dmg_val = pkm.calculate_DMG_output(DummyMove(move_info), field, weather)
+                dmg_val = pkm.calculate_DMG_output(DummyMove(move_info), field, weather, status)
                 damages.append(dmg_val)
 
-            bulk = pkm.calculate_bulk(weather)
+            bulk = pkm.calculate_bulk(weather, status)
             if item == "구애스카프":
                 spd = pkm.stats[5] * 3 // 2
             elif pkm.ability == "곡예":

@@ -31,18 +31,18 @@ class Pokemon:
         index = {"HP": 0, "A": 1, "B": 2, "C": 3, "D": 4, "S": 5}[stat_type]
         return self.stats[index]
     
-    def calculate_DMG_output(self, move: Move, field, weather):
+    def calculate_DMG_output(self, move: Move, field, weather, status):
         if move.power == 0 or move.category == "변화":
             return 0
         
         A = self.get_stat("A") if move.category == "물리" else self.get_stat("C")
-        dmg_output = DMGoutput_Bulk_Calculator(self.pkm).calculate_dmg_output(A, move, field, weather)
+        dmg_output = DMGoutput_Bulk_Calculator(self.pkm).calculate_dmg_output(A, move, field, weather, status)
         return dmg_output
     
-    def calculate_bulk(self, weather):
+    def calculate_bulk(self, weather, status):
         hp = self.get_stat("HP")
         b = self.get_stat("B")
         d = self.get_stat("D")
         
-        physical_bulk, special_bulk = DMGoutput_Bulk_Calculator(self.pkm).calculate_bulk(hp, b, d, weather)
+        physical_bulk, special_bulk = DMGoutput_Bulk_Calculator(self.pkm).calculate_bulk(hp, b, d, weather, status)
         return physical_bulk, special_bulk

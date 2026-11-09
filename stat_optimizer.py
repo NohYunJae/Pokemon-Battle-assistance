@@ -52,7 +52,8 @@ class PokemonStatOptimizer:
         hits,
         weather,
         field,
-        crit
+        crit,
+        status
     ):  
         available_sp = av_sp
         move_dict = Move.load_move_dict()
@@ -98,7 +99,7 @@ class PokemonStatOptimizer:
             else:
                 raise ValueError(f"유효하지 않는 기술 분류: {mv_category}")
 
-            dmg_raw = BattleCalculator(pkm2, pkm1, atk_move).calculate_damage(atk, df, H, rank_a, rank_b, weather, field, crit)[0]
+            dmg_raw = BattleCalculator(pkm2, pkm1, atk_move).calculate_damage(atk, df, H, rank_a, rank_b, weather, field, crit, status)[0]
             dmg = np.asarray(dmg_raw)
             
             current_combos = np.zeros((1, *dmg.shape[1:]))
@@ -290,6 +291,7 @@ class PokemonStatOptimizer:
             weather,
             field,
             crit,
+            status,
             sp_av,
             current_hp_percent
     ):
@@ -338,8 +340,8 @@ class PokemonStatOptimizer:
 
             A = np.floor((A0 + A_sp + 20) * nature_modifier)
 
-            dmg, _ = BattleCalculator(pkm1, pkm2, atk_move).calculate_damage(A, B, H2, rank_a, rank_b, weather, field, crit)
-            dmg_output_single = DMGoutput_Bulk_Calculator(pkm1).calculate_dmg_output(A, atk_move, field, weather)
+            dmg, _ = BattleCalculator(pkm1, pkm2, atk_move).calculate_damage(A, B, H2, rank_a, rank_b, weather, field, crit, status)
+            dmg_output_single = DMGoutput_Bulk_Calculator(pkm1).calculate_dmg_output(A, atk_move, field, weather, status)
             
             move_total_dmg = calculate_total_dmg(dmg, hits)
             sequence_dmg_matrices.append(move_total_dmg)

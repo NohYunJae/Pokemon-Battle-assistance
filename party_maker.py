@@ -36,7 +36,7 @@ class TeamAnalyzer:
             if power == 0:
                 continue
             
-            dmg_output = pkm.calculate_DMG_output(move_obj, sample["필드"], sample["날씨"])
+            dmg_output = pkm.calculate_DMG_output(move_obj, sample["필드"], sample["날씨"], sample["상태이상"])
 
             main_moves = {}
             sub_moves = {}

@@ -8,7 +8,7 @@ class BattleCalculator:
         self.defender = defender
         self.move = move
     
-    def _base_damage(self, atk_stat, def_stat, rank_a, rank_b, field):
+    def _base_damage(self, atk_stat, def_stat, rank_a, rank_b, field, status_a, status_b):
         level = 50
         def calculate_ranked_stat(base_stat: int, rank: int) -> int:
             if not -6 <= rank <= 6:
@@ -24,12 +24,12 @@ class BattleCalculator:
         def_stat = calculate_ranked_stat(def_stat, rank_b)
 
         pmods = Power_modifiers(self.attacker, self.move)
-        p_ability_mod, self.move.type = pmods.ability_mods()
+        p_ability_mod, self.move.type, atk_stat, power = pmods.ability_mods(atk_stat, status_a)
         f_ability_mod, self.move.type, power = pmods.field_mods(field=field)
         item_power_mod, mod_atk_stat = pmods.item_mods(atk_stat)
 
         bmods = Bulk_modifiers(self.attacker, self.defender, self.move)
-        d_ability_mod = bmods.ability_mods()
+        d_ability_mod, def_stat = bmods.ability_mods(status_b, def_stat)
         mod_def_stat = bmods.item_mods(def_stat)
 
         power = int(power * f_ability_mod)
@@ -47,7 +47,7 @@ class BattleCalculator:
             base = 0
         return base
 
-    def calculate_damage(self, atk_stat, def_stat, def_hp, rank_a = 0, rank_b = 0, weather=None, field=None, critical=False):
+    def calculate_damage(self, atk_stat, def_stat, def_hp, rank_a = 0, rank_b = 0, weather=None, field=None, critical=False, status=False):
         def apply_pokerng_rounding(acc: int, numerator: int) -> int:
             """
             PokeRNG 반올림 연산 규칙: (acc * numerator + 2048) // 4096
@@ -88,7 +88,8 @@ class BattleCalculator:
             if "바위" in self.defender.type and self.move.type == "특수":
                 def_stat = def_stat * 6144 // 4096
 
-        base_damage = self._base_damage(atk_stat, def_stat, rank_a, rank_b, field)
+        status_a, status_b = status
+        base_damage = self._base_damage(atk_stat, def_stat, rank_a, rank_b, field, status_a, status_b)
         damages = []
         percentages = []
 
@@ -117,6 +118,10 @@ class BattleCalculator:
                 type_mod *= type_chart.get(self.move.type, {}).get(t, 1.0)
             dmg = np.floor(dmg * type_mod)
 
+            if status_a == "화상" and self.move.category == "물리":
+                if not self.attacker.ability == "근성":
+                    dmg = dmg // 2
+                
             other_mods = []
             if self.defender.ability in ["멀티스케일", "스펙터가드"] and getattr(self.defender, "hp_percent", 100) == 100:
                 other_mods.append(2048)
@@ -180,12 +185,12 @@ class DMGoutput_Bulk_Calculator:
     def __init__(self, pkm):
         self.pkm = pkm
 
-    def _base_dmg_output(self, atk_stat, move, field = None):
+    def _base_dmg_output(self, atk_stat, move, field = None, status = None):
         power = move.power
 
         powrmods = Power_modifiers(self.pkm, move)
+        ability_mod, move.type, atk_stat, power = powrmods.ability_mods(atk_stat, status)
         f_ability_mod, move.type, power = powrmods.field_mods(field=field)
-        ability_mod, move.type = powrmods.ability_mods()
         item_power_mod, atk_stat_mod = powrmods.item_mods(atk_stat)
 
         power = int(power * f_ability_mod)
@@ -200,13 +205,12 @@ class DMGoutput_Bulk_Calculator:
 
         return fp_bs
     
-    def calculate_dmg_output(self, atk_stat, move, field = None, weather = None):
+    def calculate_dmg_output(self, atk_stat, move, field = None, weather = None, status = None):
         def apply_pokerng_rounding(acc: int, numerator: int) -> int:
             """
             PokeRNG 반올림 연산 규칙: (acc * numerator + 2048) // 4096
             """
             return ((acc * numerator) + 2048) // 4096
-
         def apply_other_modifiers(dmg: int, mod_numerators: list[int]) -> int:
             """
             최종 기타 보정(Other Modifiers)을 누적 연산 후 데미지에 적용합니다.
@@ -235,7 +239,7 @@ class DMGoutput_Bulk_Calculator:
             if move.type == "불꽃": weather_mod = 6144
             elif move.type == "물": weather_mod = 2048
 
-        base_fp = self._base_dmg_output(atk_stat, move, field)
+        base_fp = self._base_dmg_output(atk_stat, move, field, status)
         dmg_output = base_fp
 
         if weather_mod != 4096:
@@ -246,6 +250,10 @@ class DMGoutput_Bulk_Calculator:
         elif move.type in self.pkm.types:
             dmg_output = (dmg_output * 6144) // 4096
 
+        if status == "화상" and move.category == "물리":
+            if not self.pkm.ability == "근성":
+                dmg_output = dmg_output // 2
+
         other_mods4fp = []
         if self.pkm.item == "생명의구슬":
             other_mods4fp.append(5325)
@@ -254,7 +262,10 @@ class DMGoutput_Bulk_Calculator:
         
         return dmg_output
 
-    def calculate_bulk(self, H, B, D, weather):
+    def calculate_bulk(self, H, B, D, weather, status):
+        def has_status(status):
+            return bool(status)
+        
         if weather == "눈":
             if "얼음" in self.pkm.type:
                 B = B * 6144 // 4096
@@ -264,6 +275,9 @@ class DMGoutput_Bulk_Calculator:
 
         if self.pkm.item == "돌격조끼":
             D = D * 6144 // 4096
+
+        if self.pkm.ability == "이상한비늘" and has_status(status):
+            B = B * 3 // 2
 
         physical_bulk = int(H * B / 0.411)
         special_bulk = int(H * D / 0.411)

@@ -45,6 +45,7 @@ class SampleCSVbuilder:
         moves,
         weather,
         field,
+        status,
         pokedex_csv="Pokedex.csv"
     ):
         sample_path = os.path.join(DATA_DIR, 'data', 'samples')
@@ -72,10 +73,10 @@ class SampleCSVbuilder:
         damages = []
         for move_name in moves:
             move = Pokemon.move_dict.get(move_name, {"type": "노말", "category": "물리", "power": 0})
-            fpower = pkm.calculate_DMG_output(move, field, weather)
+            fpower = pkm.calculate_DMG_output(move, field, weather, status)
             damages.append(fpower)
 
-        bulk = pkm.calculate_bulk(weather)
+        bulk = pkm.calculate_bulk(weather, status)
         if pkm.item == "구애스카프":
             spd = pkm.stats[5] * 3 // 2
         elif pkm.ability == "곡예":
@@ -101,6 +102,7 @@ class SampleCSVbuilder:
         
         weather = weather or ""
         field = field or ""
+        status = status or ""
         with open(file_path, mode="w", newline="", encoding="utf-8-sig") as file:
             writer = csv.writer(file)
             writer.writerow(["포켓몬", name])
@@ -117,6 +119,7 @@ class SampleCSVbuilder:
             writer.writerow(["실수치"] + pkm.stats)
             writer.writerow(["날씨", weather])
             writer.writerow(["필드", field])
+            writer.writerow(["상태이상", status])
             writer.writerow(["기술"] + moves)
             writer.writerow(["DMG"] + damages)
             writer.writerow(["", "물리", "특수"])
