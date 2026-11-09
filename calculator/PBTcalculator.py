@@ -74,19 +74,19 @@ class BattleCalculator:
             return final_dmg
 
         # 1. 날씨 및 급소 보정 계산
-        weather_mod = 4096
+        weather_mod = 1.0
         if weather == "비":
-            if self.move.type == "물": weather_mod = 6144
-            elif self.move.type == "불꽃": weather_mod = 2048
+            if self.move.type == "물": weather_mod = 1.5
+            elif self.move.type == "불꽃": weather_mod = 0.5
         elif weather == "쾌청":
-            if self.move.type == "불꽃": weather_mod = 6144
-            elif self.move.type == "물": weather_mod = 2048
+            if self.move.type == "불꽃": weather_mod = 1.5
+            elif self.move.type == "물": weather_mod = 0.5
         elif weather == "눈":
             if "얼음" in self.defender.type and self.move.type == "물리":
-                def_stat = def_stat * 6144 // 4096
+                def_stat = def_stat * 3 // 2
         elif weather == "모래바람":
             if "바위" in self.defender.type and self.move.type == "특수":
-                def_stat = def_stat * 6144 // 4096
+                def_stat = def_stat * 3 // 2
 
         status_a, status_b = status
         base_damage = self._base_damage(atk_stat, def_stat, rank_a, rank_b, field, status_a, status_b)
@@ -95,23 +95,22 @@ class BattleCalculator:
 
         crit = CriticalHitManager(self.attacker,self.defender,self.move)
         critical = crit.is_always_critical()
-        crit_mod = 6144 if critical else 4096
 
         for roll in range(85, 101):
             dmg = base_damage
 
-            if weather_mod != 4096:
-                dmg = (dmg * weather_mod) // 4096
+            if weather_mod != 1.0:
+                dmg = int(dmg * weather_mod)
                 
-            if crit_mod != 4096:
-                dmg = (dmg * crit_mod) // 4096
+            if critical:
+                dmg = dmg * 3 // 2
 
             dmg = (dmg * roll) // 100
 
             if self.attacker.ability == "적응력" and self.move.type in self.attacker.types:
-                dmg = (dmg * 8192) // 4096
+                dmg = dmg * 2
             elif self.move.type in self.attacker.types:
-                dmg = (dmg * 6144) // 4096
+                dmg = dmg * 3 // 2
 
             type_mod = 1.0
             for t in self.defender.types:
@@ -231,24 +230,24 @@ class DMGoutput_Bulk_Calculator:
 
             return final_dmg
         
-        weather_mod = 4096
+        weather_mod = 1.0
         if weather == "비":
-            if move.type == "물": weather_mod = 6144
-            elif move.type == "불꽃": weather_mod = 2048
+            if move.type == "물": weather_mod = 1.5
+            elif move.type == "불꽃": weather_mod = 0.5
         elif weather == "쾌청":
-            if move.type == "불꽃": weather_mod = 6144
-            elif move.type == "물": weather_mod = 2048
+            if move.type == "불꽃": weather_mod = 1.5
+            elif move.type == "물": weather_mod = 0.5
 
         base_fp = self._base_dmg_output(atk_stat, move, field, status)
         dmg_output = base_fp
 
-        if weather_mod != 4096:
-            dmg_output = (dmg_output * weather_mod) // 4096
+        if weather_mod != 1.0:
+            dmg_output = int(dmg_output * weather_mod)
 
         if self.pkm.ability == "적응력" and move.type in self.pkm.types:
-            dmg_output = (dmg_output * 8192) // 4096
+            dmg_output = dmg_output * 2
         elif move.type in self.pkm.types:
-            dmg_output = (dmg_output * 6144) // 4096
+            dmg_output = (dmg_output * 3) // 2
 
         if status == "화상" and move.category == "물리":
             if not self.pkm.ability == "근성":
