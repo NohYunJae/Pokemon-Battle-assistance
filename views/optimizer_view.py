@@ -245,9 +245,9 @@ class OptimizerView:
         self.speed_rank.insert(0, "0")
 
         ctk.CTkLabel(scroll_f, text="아이템 보정:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=6, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_item = ctk.CTkComboBox(scroll_f, values=["0", "1 (스카프 등 1.5배)"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.speed_item = ctk.CTkComboBox(scroll_f, values=["", "스카프 등 1.5배"], width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_item.grid(row=6, column=1, sticky="ew", pady=4)
-        self.speed_item.set("0")
+        self.speed_item.set("")
 
         btn = ctk.CTkButton(scroll_f, text="속도 최적화 실행", fg_color="#ef4444", hover_color="#dc2626", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=11), height=32, command=self.run_speed_optimization)
         btn.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(15, 5), padx=2)
@@ -548,7 +548,7 @@ class OptimizerView:
             sp_av = int(self.speed_sp_av.get().strip() or "32")
             nature_s = float(self.speed_nature.get().strip() or "1.1")
             rank = int(self.speed_rank.get().strip() or "0")
-            item_val = 1 if "1" in self.speed_item.get() else 0
+            item_val = 1 if "스카프 등 1.5배" in self.speed_item.get() else 0
 
             optimizer = PokemonStatOptimizer()
             result = optimizer.optimize_speed_advanced(p1_data, p2_data, sp_av, nature_s, rank, item_val)
