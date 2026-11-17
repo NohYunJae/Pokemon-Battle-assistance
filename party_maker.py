@@ -1,7 +1,7 @@
 import os
 import traceback
 
-from pochamps_list import pochamps_pokemon_list
+from utils.pochamps_list import pochamps_pokemon_list
 from loader.data_loader import PokemonCSVLoader, Move, load_pokedex_cache
 from pokemon import Pokemon
 from calculator.utils.type_chart import type_chart
