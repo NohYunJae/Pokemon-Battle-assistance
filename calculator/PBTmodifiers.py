@@ -38,6 +38,9 @@ class CriticalHitManager:
             crit_stage += 1
         if self.attacker.ability == "대운":
             crit_stage += 1
+        if self.attacker.name in ["파오리","가라르파오리","창파나이트"]:
+            if self.attacker.item == "대파":
+                crit_stage += 2
 
         if crit_stage >= 3:
             return True
