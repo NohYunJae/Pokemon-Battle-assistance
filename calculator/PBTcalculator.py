@@ -285,7 +285,6 @@ class DMGoutput_Bulk_Calculator:
                 other_acc = poke_round_half_up(other_acc, num)
             return poke_round_half_down(dmg, other_acc)
 
-        # 바디프레스 기존 처리 방식 유지
         if self.move.name == "바디프레스":
             atk_stat = self.pkm.stats[2]
 
@@ -307,7 +306,6 @@ class DMGoutput_Bulk_Calculator:
         if weather_num != 4096:
             dmg_output = poke_round_half_down(dmg_output, weather_num)
 
-        # STAB (자속 보정) 및 테라스탈/변환자재 처리
         orig_types = self.pkm.types
         is_adaptability = self.pkm.ability == "적응력"
         stab_num = 4096
@@ -316,9 +314,9 @@ class DMGoutput_Bulk_Calculator:
             in_orig = eff_move_type in orig_types
             in_tera = eff_move_type == tera_type
             if in_orig and in_tera:
-                stab_num = 9216 if is_adaptability else 8192  # 2.25x 또는 2.0x
+                stab_num = 9216 if is_adaptability else 8192
             elif in_tera:
-                stab_num = 8192 if is_adaptability else 6144  # 2.0x 또는 1.5x
+                stab_num = 8192 if is_adaptability else 6144
             elif in_orig:
                 stab_num = 6144
         else:
@@ -330,7 +328,7 @@ class DMGoutput_Bulk_Calculator:
         elif stab_num != 4096:
             dmg_output = poke_round_half_down(dmg_output, stab_num)
         elif self.pkm.ability == "변환자재":
-            dmg_output = (dmg_output * 3) // 2
+            dmg_output = (dmg_output * 6144) // 4096
 
         if (
             status == "화상"
