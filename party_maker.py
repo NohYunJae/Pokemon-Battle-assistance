@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from pochamps_list import pochamps_pokemon_list
 from loader.data_loader import PokemonCSVLoader, Move, load_pokedex_cache
@@ -68,7 +69,7 @@ class TeamAnalyzer:
         return multiplier
 
     def analyze_party_offense(self):
-        """주력기 및 보조기 결정력 검증, 1배 결정력 4만 이상 고려 약점 타격 불가 조합 분석"""
+        """주력기 및 보조기 결정력 검증, 1배 결정력 4만 이상 고려 약점 타격 불가 조합 분석 및 필요한 공격 타입 순위 반환"""
         main_types = set()
         sub_types = set()
         category_counts = {"물리": 0, "특수": 0, "변화": 0}
@@ -133,7 +134,7 @@ class TeamAnalyzer:
                     }
         
         all_types = list(type_chart.keys())
-        unweakened_combinations = []
+        unweakened_combinations_raw = []
         checked_combinations = set()
 
         for t1 in all_types:
@@ -143,9 +144,9 @@ class TeamAnalyzer:
                     atk for atk in all_types 
                     if self._get_type_multiplier(atk, comb) >= 2.0
                 ]
-                unweakened_combinations.append({
+                unweakened_combinations_raw.append({
                     "combination": comb,
-                    "weakness_types": weakness_types
+                    "raw_weakness_types": weakness_types
                 })
 
             for t2 in all_types:
@@ -158,15 +159,40 @@ class TeamAnalyzer:
                                 atk for atk in all_types 
                                 if self._get_type_multiplier(atk, comb) >= 2.0
                             ]
-                            unweakened_combinations.append({
+                            unweakened_combinations_raw.append({
                                 "combination": comb,
-                                "weakness_types": weakness_types
+                                "raw_weakness_types": weakness_types
                             })
+
+        # 1. 각 약점 타입별로 커버할 수 있는 미대처 방어 조합 수(빈도) 계산
+        type_coverage_count = {}
+        for item in unweakened_combinations_raw:
+            for atk in item["raw_weakness_types"]:
+                type_coverage_count[atk] = type_coverage_count.get(atk, 0) + 1
+
+        # 2. 각 조합 내의 약점 타입들을 '파티 사각지대 커버 빈도'가 높은 순(내림차순)으로 정렬
+        unweakened_combinations = []
+        for item in unweakened_combinations_raw:
+            sorted_weakness_types = sorted(
+                item["raw_weakness_types"],
+                key=lambda atk: (-type_coverage_count.get(atk, 0), atk)
+            )
+            unweakened_combinations.append({
+                "combination": item["combination"],
+                "weakness_types": sorted_weakness_types
+            })
+
+        # 3. 전체 공격 보완 추천 타입 순위 목록 생성
+        recommended_attack_types = sorted(
+            [{"타입": t, "커버가능조합수": c} for t, c in type_coverage_count.items()],
+            key=lambda x: (-x["커버가능조합수"], x["타입"])
+        )
 
         return {
             "type_to_moves": formatted_type_to_moves,
             "category_ratios": category_ratios,
-            "unweakened_combinations": unweakened_combinations
+            "unweakened_combinations": unweakened_combinations,
+            "recommended_attack_types": recommended_attack_types
         }
     
     def _is_completely_unweakened(self, def_combo, all_party_moves):
@@ -179,10 +205,10 @@ class TeamAnalyzer:
             dmg = move["데미지"]
             mult = self._get_type_multiplier(atk_type, def_combo)
 
-            if mult >= 2.0 and dmg > 26500:
+            if mult >= 2.0 and dmg > 23000:
                 return False
             
-            if mult == 1.0 and dmg >= 43000:
+            if mult == 1.0 and dmg >= 40000:
                 return False
         
         return True
@@ -245,7 +271,6 @@ class PokemonSelector:
             if all_fail_to_resist:
                 completely_unresisted_types.add(atk_type)
 
-        # 1단계 필터 함수: 기존 공통 약점 보유 여부 확인 (True면 안전)
         def eval_filter_1(poke_types):
             has_weakness = any(
                 analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0 
@@ -253,7 +278,6 @@ class PokemonSelector:
             )
             return not has_weakness
 
-        # 2단계 필터 함수: 새로운 공통 약점 유발 여부 확인 (True면 안전)
         def eval_filter_2(poke_types):
             for atk_type in all_attack_types:
                 weak_count = sum(
@@ -266,7 +290,6 @@ class PokemonSelector:
                     return False
             return True
 
-        # 3단계 필터 함수: 치명적 사각지대 약점 보유 여부 확인 (True면 안전)
         def eval_filter_3(poke_types):
             has_blindspot_weakness = any(
                 analyzer._get_type_multiplier(atk_type, poke_types) >= 2.0 
@@ -277,10 +300,9 @@ class PokemonSelector:
         general_recommendations = []
         mega_recommendations = []
         
-        # 가중치 설정 (필터 통과 점수 및 커버 점수)
-        FILTER_PASS_SCORE = 5.0    # 필터 조건을 만족했을 때 주는 안전성 가산점
-        WEIGHT_WEAKNESS = 2.0      # 공통 약점 커버 가중치
-        WEIGHT_NOT_RESISTED = 1.0  # 반감 불가 타입 커버 가중치
+        FILTER_PASS_SCORE = 5.0    
+        WEIGHT_WEAKNESS = 2.0      
+        WEIGHT_NOT_RESISTED = 1.0  
 
         for poke_name in self.pochampslst:
             if poke_name not in pokedex_cache:
@@ -289,18 +311,15 @@ class PokemonSelector:
             poke_data = pokedex_cache[poke_name]
             poke_types = poke_data.get("types", [])
 
-            # 각 필터 단계별 통과 여부 확인 (True/False)
             pass_f1 = eval_filter_1(poke_types)
             pass_f2 = eval_filter_2(poke_types)
             pass_f3 = eval_filter_3(poke_types)
 
-            # 안전성 필터 점수 산정 (많이 만족할수록 높은 점수)
             safety_score = 0
             if pass_f1: safety_score += FILTER_PASS_SCORE
             if pass_f2: safety_score += FILTER_PASS_SCORE
             if pass_f3: safety_score += FILTER_PASS_SCORE
 
-            # 커버리지 계산
             covered_weaknesses = [
                 atk_type for atk_type in common_weaknesses.keys()
                 if analyzer._get_type_multiplier(atk_type, poke_types) < 1.0
@@ -313,12 +332,10 @@ class PokemonSelector:
 
             total_covered = covered_weaknesses + covered_not_resisted
             
-            # 파티에 조금이라도 기여할 수 있는 포켓몬인 경우에만 후보에 추가
             if total_covered or safety_score > 0:
                 weakness_count = len(covered_weaknesses)
                 not_resisted_count = len(covered_not_resisted)
                 
-                # 최종 종합 점수 = 안전성 점수 + (약점 커버 점수) + (반감 불가 커버 점수)
                 total_score = safety_score + (weakness_count * WEIGHT_WEAKNESS) + (not_resisted_count * WEIGHT_NOT_RESISTED)
 
                 item = {
@@ -336,17 +353,16 @@ class PokemonSelector:
                 else:
                     general_recommendations.append(item)
 
-        # 정렬 기준: 1순위 종합 점수, 2순위 안전성 점수, 3순위 이름
         sort_key = lambda x: (x["total_score"], x["safety_score"], x["name"])
         
         general_recommendations.sort(key=sort_key, reverse=True)
         mega_recommendations.sort(key=sort_key, reverse=True)
         
-        return general_recommendations[:10], mega_recommendations, common_weaknesses, common_not_resisted
+        return general_recommendations[:50], mega_recommendations, common_weaknesses, common_not_resisted
 
 
 def test_recommend(test_samples):
-    """방어 보완 포켓몬 추천 테스트 함수 (소프트 스코어링 점수 반영)"""
+    """방어 보완 포켓몬 추천 테스트 함수"""
     print("=== [방어 보완 포켓몬 추천 및 파티 취약 타입 분석 테스트] ===")
     try:
         selector = PokemonSelector()
@@ -395,6 +411,7 @@ def test_recommend(test_samples):
             
     except Exception as e:
         print(f"\n❌ 에러 발생: {e}")
+        traceback.print_exc()
 
 def test_offense(test_samples):
     """공격 상성 분석 테스트 함수"""
@@ -421,6 +438,15 @@ def test_offense(test_samples):
         else:
             print("    - 집계된 공격 기술이 없습니다.")
             
+        # 새로 추가된 공격 보완 추천 타입 순위 출력
+        recommended_attack_types = offense_results.get("recommended_attack_types", [])
+        print("\n  • 파티 공격 보완 추천 타입 순위 (커버 가능한 방어 조합 기준):")
+        if recommended_attack_types:
+            for idx, rec in enumerate(recommended_attack_types, 1):
+                print(f"    {idx}. {rec['타입']} (커버 조합 수: {rec['커버가능조합수']}개)")
+        else:
+            print("    - 추천 타입 없음")
+
         unweakened_combinations = offense_results.get("unweakened_combinations", [])
         print(f"\n  • 파티의 기술로 약점을 못 찌르며 고화력(4.3만 이상) 1배 타격도 불가능한 방어 타입 조합 (총 {len(unweakened_combinations)}개):")
         if unweakened_combinations:
@@ -428,21 +454,18 @@ def test_offense(test_samples):
                 def_combo = item["combination"]
                 weakness_types = item["weakness_types"]
                 w_str = ', '.join(weakness_types) if weakness_types else "없음"
-                print(f"    - {'/'.join(def_combo)} (약점 찌를 수 있는 타입: {w_str})")
+                print(f"    - {'/'.join(def_combo)} (약점 찌를 수 있는 타입 순위: {w_str})")
         else:
             print("    - 없음 (모든 방어 타입 조합에 대해 효과적인 타격이 가능합니다)")
             
     except Exception as e:
         print(f"\n❌ 에러 발생: {e}")
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
     test_samples = [
-        "트릭룸카디나르마",
-        "트릭룸메갑주",
-        "스카프삼삼드래",
-        "조심누리레느",
-        "HD하마돈샘플"
+        "메갑주",
     ]
-    # test_recommend(test_samples)
-    test_offense(test_samples)
+    test_recommend(test_samples)
+    # test_offense(test_samples)

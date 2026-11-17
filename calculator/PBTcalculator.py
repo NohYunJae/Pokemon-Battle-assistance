@@ -288,13 +288,13 @@ class DMGoutput_Bulk_Calculator:
                 return (base_stat * (2 + rank)) // 2
             else:
                 return (base_stat * 2) // (2 + abs(rank))
-
+            
+        rank_b_ = 0
+        rank_d  = 0
         if self.move.category == "물리":
             rank_b_ = rank_b
-            rank_d = 0
         elif self.move.category == "특수":
             rank_d = rank_b
-            rank_b_ = 0
 
         ranked_B = calculate_ranked_stat(B, rank_b_)
         ranked_D = calculate_ranked_stat(D, rank_d)

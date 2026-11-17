@@ -5,10 +5,9 @@ DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA")
 
 
 def _clean(val):
-  """문자열의 앞뒤 공백 및 특수 공백(\xa0)을 제거합니다."""
-  if isinstance(val, str):
-    return val.replace("\xa0", "").strip()
-  return val
+    if isinstance(val, str):
+        return val.lstrip("\ufeff").replace("\xa0", "").strip()
+    return val
 
 
 def _safe_int(val, default=0):
