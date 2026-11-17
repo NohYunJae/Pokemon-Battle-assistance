@@ -366,7 +366,7 @@ def test_recommend(test_samples):
     print("=== [방어 보완 포켓몬 추천 및 파티 취약 타입 분석 테스트] ===")
     try:
         selector = PokemonSelector()
-        general_top50, mega_top50, common_weaknesses, common_not_resisted = selector.recommend_pokemon(test_samples)
+        general_top50, mega_list, common_weaknesses, common_not_resisted = selector.recommend_pokemon(test_samples)
         
         print("\n[파티 방어 취약 타입 분석 현황]")
         print("  • 공통 약점 타입 (1순위 보완 대상):")
@@ -396,9 +396,9 @@ def test_recommend(test_samples):
         else:
             print("  - 조건을 만족하는 일반 포켓몬이 없습니다.")
 
-        print(f"\n✨ [메가진화 포켓몬] 방어 보완 추천 상위 {len(mega_top50)}마리:\n")
-        if mega_top50:
-            for idx, item in enumerate(mega_top50, 1):
+        print(f"\n✨ [메가진화 포켓몬] 방어 보완 추천 상위 {len(mega_list)}마리:\n")
+        if mega_list:
+            for idx, item in enumerate(mega_list, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
                 c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
