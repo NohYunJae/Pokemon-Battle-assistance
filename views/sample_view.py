@@ -34,6 +34,7 @@ class AutoCompleteEntry(ctk.CTkFrame):
         self.entry.bind("<Up>", self.on_key_up)
         self.entry.bind("<Return>", self.on_return)
         self.entry.bind("<Tab>", self.on_tab)
+        self.entry.bind("<FocusOut>", self.on_focus_out)
 
         self.listbox_win = None
         self.listbox = None
@@ -45,8 +46,12 @@ class AutoCompleteEntry(ctk.CTkFrame):
 
     def on_text_changed(self, *args):
         if self._after_id:
-            self.after_cancel(self._after_id)
-        self._after_id = self.after(30, self._process_text_change)
+            try:
+                self.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+        self._after_id = self.after(50, self._process_text_change)
 
     def _process_text_change(self):
         typed = self.var.get().strip().lower()
@@ -93,8 +98,24 @@ class AutoCompleteEntry(ctk.CTkFrame):
             pass
 
     def hide_dropdown(self):
-        if self.listbox_win and self.listbox_win.winfo_exists():
-            self.listbox_win.withdraw()
+        if self.listbox_win:
+            try:
+                self.listbox_win.destroy()
+            except Exception:
+                pass
+            self.listbox_win = None
+            self.listbox = None
+
+    def on_focus_out(self, event):
+        self.after(150, self._check_and_hide)
+
+    def _check_and_hide(self):
+        try:
+            focus_widget = self.focus_get()
+            if focus_widget != self.entry and (not self.listbox_win or not str(focus_widget).startswith(str(self.listbox_win))):
+                self.hide_dropdown()
+        except Exception:
+            self.hide_dropdown()
 
     def on_select(self, event):
         if self.listbox and self.listbox.curselection():

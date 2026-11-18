@@ -26,31 +26,13 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.entry.bind("<Tab>", self._on_tab)
         self.entry.bind("<Down>", self._on_arrow_down)
         self.entry.bind("<Up>", self._on_arrow_up)
+        self.entry.bind("<FocusOut>", self._on_focus_out)
         
         if self.command:
             self.var.trace_add("write", lambda *args: self.command(self.var.get()))
 
-        self.listbox_window = tk.Toplevel(self)
-        self.listbox_window.wm_overrideredirect(True)
-        self.listbox_window.attributes("-topmost", True)
-        self.listbox_window.withdraw()
-
-        self.listbox = tk.Listbox(
-            self.listbox_window, 
-            height=5, 
-            font=(FONT_FAMILY, 9),
-            bg="#0C1C2C",
-            fg="#FFFFFF",
-            selectbackground="#C74002",
-            selectforeground="#FFFFFF",
-            relief="flat", 
-            bd=0,
-            highlightthickness=1,
-            highlightcolor="#BAE6FD"
-        )
-        self.listbox.pack(fill="both", expand=True)
-        self.listbox.bind("<<ListboxSelect>>", self._on_select)
-        self.listbox.bind("<Return>", self._on_return)
+        self.listbox_window = None
+        self.listbox = None
 
         self._debounce_timer = None
 
@@ -67,7 +49,11 @@ class AutocompleteCombobox(ctk.CTkFrame):
         if event.keysym in ("Down", "Up", "Return", "Escape", "Tab"):
             return
         if self._debounce_timer is not None:
-            self.after_cancel(self._debounce_timer)
+            try:
+                self.after_cancel(self._debounce_timer)
+            except Exception:
+                pass
+            self._debounce_timer = None
         self._debounce_timer = self.after(80, self._perform_search)
 
     def _perform_search(self):
@@ -82,6 +68,28 @@ class AutocompleteCombobox(ctk.CTkFrame):
             self._close_listbox()
 
     def _show_listbox(self, matches):
+        if self.listbox_window is None or not self.listbox_window.winfo_exists():
+            self.listbox_window = tk.Toplevel(self)
+            self.listbox_window.wm_overrideredirect(True)
+            self.listbox_window.attributes("-topmost", True)
+
+            self.listbox = tk.Listbox(
+                self.listbox_window, 
+                height=5, 
+                font=(FONT_FAMILY, 9),
+                bg="#0C1C2C",
+                fg="#FFFFFF",
+                selectbackground="#C74002",
+                selectforeground="#FFFFFF",
+                relief="flat", 
+                bd=0,
+                highlightthickness=1,
+                highlightcolor="#BAE6FD"
+            )
+            self.listbox.pack(fill="both", expand=True)
+            self.listbox.bind("<<ListboxSelect>>", self._on_select)
+            self.listbox.bind("<Return>", self._on_return)
+
         self.listbox.delete(0, tk.END)
         for m in matches:
             self.listbox.insert(tk.END, m)
@@ -98,7 +106,7 @@ class AutocompleteCombobox(ctk.CTkFrame):
             pass
 
     def _on_arrow_down(self, event):
-        if self.listbox and self.listbox.size() > 0:
+        if self.listbox and self.listbox.winfo_exists() and self.listbox.size() > 0:
             current = self.listbox.curselection()
             next_index = 0 if not current else (current[0] + 1) % self.listbox.size()
             self.listbox.selection_clear(0, tk.END)
@@ -107,7 +115,7 @@ class AutocompleteCombobox(ctk.CTkFrame):
             return "break"
 
     def _on_arrow_up(self, event):
-        if self.listbox and self.listbox.size() > 0:
+        if self.listbox and self.listbox.winfo_exists() and self.listbox.size() > 0:
             current = self.listbox.curselection()
             prev_index = self.listbox.size() - 1 if not current else (current[0] - 1) % self.listbox.size()
             self.listbox.selection_clear(0, tk.END)
@@ -116,7 +124,7 @@ class AutocompleteCombobox(ctk.CTkFrame):
             return "break"
 
     def _on_select(self, event):
-        if self.listbox and self.listbox.curselection():
+        if self.listbox and self.listbox.winfo_exists() and self.listbox.curselection():
             index = self.listbox.curselection()[0]
             selected = self.listbox.get(index)
             self.var.set(selected)
@@ -126,7 +134,7 @@ class AutocompleteCombobox(ctk.CTkFrame):
                 self.command(selected)
 
     def _on_return(self, event):
-        if self.listbox_window and self.listbox_window.state() == "normal" and self.listbox.size() > 0:
+        if self.listbox_window and self.listbox_window.winfo_exists() and self.listbox_window.state() == "normal" and self.listbox.size() > 0:
             if not self.listbox.curselection():
                 self.listbox.selection_set(0)
             self._on_select(None)
@@ -139,12 +147,25 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self._close_listbox()
         return None
 
+    def _on_focus_out(self, event):
+        self.after(150, self._check_and_hide)
+
+    def _check_and_hide(self):
+        try:
+            focus_widget = self.focus_get()
+            if focus_widget != self.entry and (not self.listbox_window or not str(focus_widget).startswith(str(self.listbox_window))):
+                self._close_listbox()
+        except Exception:
+            self._close_listbox()
+
     def _close_listbox(self):
         if self.listbox_window:
             try:
-                self.listbox_window.withdraw()
+                self.listbox_window.destroy()
             except Exception:
                 pass
+            self.listbox_window = None
+            self.listbox = None
 
 
 class DummyObject:

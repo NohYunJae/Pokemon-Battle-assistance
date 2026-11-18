@@ -255,6 +255,9 @@ class DMGoutput_Bulk_Calculator:
         self.move = move
 
     def _base_dmg_output(self, atk_stat, move, field=None, status=None, rank_a=0, is_crit=False):
+        if move.category == "변화":
+            return 0.0, move.type
+
         def calculate_ranked_stat(base_stat: int, rank: int) -> int:
             if not -6 <= rank <= 6:
                 raise ValueError("랭크는 -6에서 +6 사이여야 합니다.")
@@ -264,7 +267,7 @@ class DMGoutput_Bulk_Calculator:
                 return (base_stat * 2) // (2 + abs(rank))
 
         move_type = move.type
-        power = move.power
+        power = float(move.power)
         
         eff_rank_a = max(0, rank_a) if is_crit else rank_a
         atk_stat = calculate_ranked_stat(atk_stat, eff_rank_a)
@@ -274,131 +277,136 @@ class DMGoutput_Bulk_Calculator:
         f_ability_mod, move_type, power = powrmods.field_mods(field=field, move_type=move_type, power=power)
         item_power_mod, final_atk_stat = powrmods.item_mods(atk_stat, move_type)
 
-        power = poke_round_half_down(power, int(round(f_ability_mod * 4096)))
-        power = poke_round_half_down(power, int(round(ability_mod * 4096)))
-        power = poke_round_half_down(power, int(round(item_power_mod * 4096)))
-        power = max(1, power)
+        power = power * f_ability_mod * ability_mod * item_power_mod
+        power = max(1.0, float(power))
 
-        fp_bs = final_atk_stat * power
-        if move.category == "변화":
-            fp_bs = 0
+        fp_bs = float(final_atk_stat) * power
 
         return fp_bs, move_type
 
-    def calculate_dmg_output(self, atk_stat, field=None, weather=None, status=None, rank_a=0, tera_type=None):
-        def apply_other_modifiers(dmg: int, mod_numerators: list[int]) -> int:
-            if not mod_numerators:
-                return dmg
-            other_acc = 4096
-            for num in mod_numerators:
-                other_acc = poke_round_half_up(other_acc, num)
-            return poke_round_half_down(dmg, other_acc)
+    def calculate_dmg_output(
+        self,
+        atk_stat,
+        field=None,
+        weather=None,
+        status=None,
+        rank_a=0,
+        tera_type=None,
+        is_sub_call=False,
+    ):
+      # _sub 접미사를 분리하여 원본 기술명 추출
+      base_move_name = self.move.name.split("_sub")[0]
 
-        multi_cat = None
-        for cat, moves in MULTI_STRIKE_MOVES.items():
-            if self.move.name in moves:
-                multi_cat = cat
-                break
+      multi_cat = None
+      for cat, moves in MULTI_STRIKE_MOVES.items():
+        if base_move_name in moves:
+          multi_cat = cat
+          break
 
-        # 연속기 기본 타수 결정
-        hit_count = 1
-        if multi_cat:
-            is_loaded_dice = (getattr(self.pkm, "item", None) == "속임수주사위")
-            if multi_cat == "multi_2_5":
-                hit_count = 4 if is_loaded_dice else 3
-            elif multi_cat == "multi_2":
-                hit_count = 2
-            elif multi_cat == "multi_3":
-                hit_count = 3
-            elif multi_cat == "multi_10":
-                hit_count = 10
-            
-        if self.move.name == "바디프레스":
-            atk_stat = self.pkm.stats[2]
+      hit_count = 1
+      if multi_cat and not is_sub_call:
+        is_loaded_dice = getattr(self.pkm, "item", None) == "속임수주사위"
+        if multi_cat == "multi_2_5":
+          hit_count = 4 if is_loaded_dice else 3
+        elif multi_cat == "multi_2":
+          hit_count = 2
+        elif multi_cat == "multi_3":
+          hit_count = 3
+        elif multi_cat == "multi_10":
+          hit_count = 10
 
-        # 항상 급소 기술 여부 확인 (서브 호출 이름인 _sub 제거 후 확인)
-        base_move_name = self.move.name.split('_sub')[0]
-        is_always_crit = base_move_name in ALWAYS_CRIT_MOVES
+      if self.move.name == "바디프레스":
+        atk_stat = self.pkm.stats[2]
 
-        # [수정] 트리플킥 및 트리플악셀 재귀 오류 방지 처리
-        if multi_cat and self.move.name in ["트리플킥", "트리플악셀"]:
-            hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[self.move.name][:hit_count]
-            total_dmg_output = 0
-            for p in hit_powers:
-                # 임시 객체를 만들 때 이름을 다르게 주어 multi_cat에 다시 걸려 무한 재귀에 빠지는 것 방지
-                temp_move = DummyObject(
-                    name=f"{self.move.name}_sub", power=p, type=self.move.type, category=self.move.category, contact=getattr(self.move, "contact", False)
-                )
-                temp_calc = DMGoutput_Bulk_Calculator(self.pkm, temp_move)
-                total_dmg_output += temp_calc.calculate_dmg_output(atk_stat, field, weather, status, rank_a, tera_type)
-            return total_dmg_output
+      is_always_crit = base_move_name in ALWAYS_CRIT_MOVES
 
-        base_fp, eff_move_type = self._base_dmg_output(atk_stat, self.move, field, status, rank_a, is_crit=is_always_crit)
-        dmg_output = base_fp
+      if multi_cat and not is_sub_call and base_move_name in ["트리플킥", "트리플악셀"]:
+        hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[
+            base_move_name
+        ][:hit_count]
+        total_dmg_output = 0
+        for p in hit_powers:
+          temp_move = DummyObject(
+              name=f"{base_move_name}_sub",
+              power=p,
+              type=self.move.type,
+              category=self.move.category,
+              contact=getattr(self.move, "contact", False),
+          )
+          temp_calc = DMGoutput_Bulk_Calculator(self.pkm, temp_move)
+          total_dmg_output += temp_calc.calculate_dmg_output(
+              atk_stat, field, weather, status, rank_a, tera_type, is_sub_call=True
+          )
+        return int(np.floor(total_dmg_output))
 
-        weather_num = 4096
-        if weather == "비":
-            if eff_move_type == "물":
-                weather_num = 6144
-            elif eff_move_type == "불꽃":
-                weather_num = 2048
-        elif weather == "쾌청":
-            if eff_move_type == "불꽃" or self.move.name in ["하이드로스팀", "하이드로스팀_sub"]:
-                weather_num = 6144
-            elif eff_move_type == "물":
-                weather_num = 2048
+      base_fp, eff_move_type = self._base_dmg_output(
+          atk_stat, self.move, field, status, rank_a, is_crit=is_always_crit
+      )
+      dmg_output = float(base_fp)
 
-        if weather_num != 4096:
-            dmg_output = poke_round_half_down(dmg_output, weather_num)
+      weather_multiplier = 1.0
+      if weather == "비":
+        if eff_move_type == "물":
+          weather_multiplier = 1.5
+        elif eff_move_type == "불꽃":
+          weather_multiplier = 0.5
+      elif weather == "쾌청":
+        if eff_move_type == "불꽃" or base_move_name in [
+            "하이드로스팀",
+        ]:
+          weather_multiplier = 1.5
+        elif eff_move_type == "물":
+          weather_multiplier = 0.5
 
-        # 항상 급소 기술일 경우 결정력에 1.5배(6144/4096) 급소 보정 적용
-        if is_always_crit:
-            dmg_output = poke_round_half_down(dmg_output, 6144)
+      dmg_output *= weather_multiplier
 
-        orig_types = self.pkm.types
-        is_adaptability = self.pkm.ability == "적응력"
-        stab_num = 4096
+      if is_always_crit:
+        dmg_output *= 1.5
 
-        if tera_type:
-            in_orig = eff_move_type in orig_types
-            in_tera = eff_move_type == tera_type
-            if in_orig and in_tera:
-                stab_num = 9216 if is_adaptability else 8192
-            elif in_tera:
-                stab_num = 8192 if is_adaptability else 6144
-            elif in_orig:
-                stab_num = 6144
-        else:
-            if eff_move_type in orig_types:
-                stab_num = 8192 if is_adaptability else 6144
+      orig_types = self.pkm.types
+      is_adaptability = self.pkm.ability == "적응력"
+      stab_multiplier = 1.0
 
-        if self.pkm.ability == "적응력" and eff_move_type in orig_types and not tera_type:
-            dmg_output = dmg_output * 2
-        elif stab_num != 4096:
-            dmg_output = poke_round_half_down(dmg_output, stab_num)
-        elif self.pkm.ability == "변환자재":
-            dmg_output = (dmg_output * 6144) // 4096
+      if tera_type:
+        in_orig = eff_move_type in orig_types
+        in_tera = eff_move_type == tera_type
+        if in_orig and in_tera:
+          stab_multiplier = 2.25 if is_adaptability else 2.0
+        elif in_tera:
+          stab_multiplier = 2.0 if is_adaptability else 1.5
+        elif in_orig:
+          stab_multiplier = 1.5
+      else:
+        if eff_move_type in orig_types:
+          stab_multiplier = 2.0 if is_adaptability else 1.5
 
-        if (
-            status == "화상"
-            and self.move.category == "물리"
-            and self.pkm.ability != "근성"
-            and not self.move.name.endswith("객기")
-        ):
-            dmg_output = poke_round_half_down(dmg_output, 2048)
+      if (
+          self.pkm.ability == "적응력"
+          and eff_move_type in orig_types
+          and not tera_type
+      ):
+        dmg_output *= 2.0
+      elif stab_multiplier != 1.0:
+        dmg_output *= stab_multiplier
+      elif self.pkm.ability == "변환자재":
+        dmg_output *= 1.5
 
-        other_mods4fp = []
-        if self.pkm.item == "생명의구슬":
-            other_mods4fp.append(5324)
+      if (
+          status == "화상"
+          and self.move.category == "물리"
+          and self.pkm.ability != "근성"
+          and not base_move_name.endswith("객기")
+      ):
+        dmg_output *= 0.5
 
-        dmg_output = apply_other_modifiers(dmg_output, other_mods4fp)
+      if self.pkm.item == "생명의구슬":
+        dmg_output *= 1.3
 
-        # 일반 연속기인 경우 결정력에 타수 곱하기 (단, _sub 이름이 붙은 서브 호출은 제외)
-        if multi_cat and not self.move.name.endswith("_sub"):
-            dmg_output *= hit_count
+      # 일반 연속기(연속펀치 등 위력이 고정인 경우)에서만 hit_count 곱하기 적용 (base_move_name 기준)
+      if multi_cat and not is_sub_call and base_move_name not in ["트리플킥", "트리플악셀"]:
+        dmg_output *= hit_count
 
-        return dmg_output
-
+      return int(np.floor(dmg_output))
 
     def calculate_bulk(self, H, B, D, weather, status, rank_b=0):
         def has_status(status):
