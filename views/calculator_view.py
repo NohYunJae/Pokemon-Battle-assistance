@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import customtkinter as ctk
 import tkinter as tk
 import threading
@@ -6,8 +7,9 @@ import threading
 from pokemon import Pokemon
 from calculator.PBTcalculator import BattleCalculator, DMGoutput_Bulk_Calculator
 from calculator.stats import get_pokemon_stats
-from .utils.cache_manager import GameDataCache
+from calculator.utils.abilities import MULTI_STRIKE_MOVES
 from calculator.utils.nature_chart import nature_chart
+from .utils.cache_manager import GameDataCache
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 FONT_FAMILY = "Malgun Gothic"
@@ -162,11 +164,10 @@ class CalculatorView(ctk.CTkFrame):
         self.nature_list = list(nature_chart.keys())
         self._is_initialized = False
 
-        self.grid_columnconfigure(0, weight=0, minsize=260)  # 왼쪽 패널 최소 가로크기 확보 (잘림 방지)
+        self.grid_columnconfigure(0, weight=0, minsize=260)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # 휠 스크롤 패널 적용 및 가로 크기 넉넉하게 확장
         self.left_frame = ctk.CTkScrollableFrame(self, fg_color="#F0F9FF", corner_radius=8, border_width=1.5, border_color="#000000", width=260)
         self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(5, 3), pady=5)
 
@@ -179,7 +180,6 @@ class CalculatorView(ctk.CTkFrame):
         input_container = ctk.CTkFrame(self.left_frame, fg_color="transparent")
         input_container.pack(fill="both", expand=False, padx=12, pady=2)
 
-        # ---------------- 1. 공격자 설정 ----------------
         atk_label = ctk.CTkLabel(input_container, text="[공격자 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
         atk_label.pack(anchor="w", pady=(1, 1))
         
@@ -191,10 +191,21 @@ class CalculatorView(ctk.CTkFrame):
 
         self.move_name_combo = self._create_move_row(input_container, "기술/위력:", [], self.on_move_changed)
         
+        self.multi_strike_frame = ctk.CTkFrame(input_container, fg_color="transparent")
+        multi_strike_lbl = ctk.CTkLabel(self.multi_strike_frame, text="연속기 타수:", width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        multi_strike_lbl.pack(side="left")
+        self.multi_strike_combo = ctk.CTkComboBox(
+            self.multi_strike_frame, values=["2", "3", "4", "5"], width=140, height=20, 
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            command=lambda x: self.run_calculation()
+        )
+        self.multi_strike_combo.pack(side="left")
+        self.multi_strike_combo.set("3")
+
         self.atk_nature_combo = self._create_combo_row(input_container, "성격:", self.nature_list, command=lambda x: self.run_calculation())
         self.atk_nature_combo.set("고집" if "고집" in self.nature_list else self.nature_list[0])
         
-        self.atk_item_entry = self._create_input_row(input_container, "지닌물건:", "", command=lambda e: self.run_calculation())
+        self.atk_item_entry = self._create_input_row(input_container, "지닌물건:", "", command=self.on_item_changed)
         self.atk_ability_entry = self._create_input_row(input_container, "특성:", "", command=lambda e: self.run_calculation())
         
         self.atk_status_combo = self._create_combo_row(
@@ -207,7 +218,6 @@ class CalculatorView(ctk.CTkFrame):
             input_container, self.atk_sp_label_var, "32", "0", command=lambda e: self.run_calculation()
         )
 
-        # ---------------- 2. 방어자 설정 ----------------
         def_label = ctk.CTkLabel(input_container, text="[방어자 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
         def_label.pack(anchor="w", pady=(6, 1))
 
@@ -225,13 +235,14 @@ class CalculatorView(ctk.CTkFrame):
         )
         self.def_status_combo.set("")
 
-        self.def_sp_h_entry = self._create_input_row(input_container, "체력 [SP] :", "32", command=lambda e: self.run_calculation())
+        self.def_sp_h_entry = self._create_sp_row_simple(
+            input_container, "체력 [SP] :", "32", command=lambda e: self.run_calculation()
+        )
         
         self.def_sp_stat_entry, self.def_rank_entry = self._create_sp_with_rank_row(
             input_container, self.def_sp_stat_label_var, "32", "0", command=lambda e: self.run_calculation()
         )
 
-        # ---------------- 3. 필드 / 환경 설정 (맨 아래로 이동) ----------------
         env_label = ctk.CTkLabel(input_container, text="[필드 / 환경 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
         env_label.pack(anchor="w", pady=(6, 1))
 
@@ -247,7 +258,6 @@ class CalculatorView(ctk.CTkFrame):
         )
         self.field_combo.set("")
 
-        # 급소 여부: 체크박스 형태 및 헤더 라벨 정렬 맞춤
         crit_frame = ctk.CTkFrame(input_container, fg_color="transparent")
         crit_frame.pack(fill="x", pady=1)
         
@@ -263,7 +273,6 @@ class CalculatorView(ctk.CTkFrame):
         )
         self.crit_checkbox.pack(side="left", padx=2)
 
-        # ---------------- 결과 표시 영역 ----------------
         res_title_label = ctk.CTkLabel(self.right_frame, text="📊 계산 결과", font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"))
         res_title_label.pack(anchor="w", padx=15, pady=(15, 10))
 
@@ -325,6 +334,51 @@ class CalculatorView(ctk.CTkFrame):
         if command:
             entry.bind("<KeyRelease>", command)
         return entry
+
+    def _create_sp_row_simple(self, parent, label_text, default_sp="32", command=None):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame.pack(fill="x", pady=1)
+        
+        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        lbl.pack(side="left")
+
+        right_sub_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        right_sub_frame.pack(side="left", fill="none")
+
+        def adjust_value(entry_widget, delta, min_val, max_val):
+            try:
+                val = int(entry_widget.get().strip() or "0")
+                new_val = min(max(val + delta, min_val), max_val)
+                entry_widget.delete(0, "end")
+                entry_widget.insert(0, str(new_val))
+                if command:
+                    command(None)
+            except ValueError:
+                entry_widget.delete(0, "end")
+                entry_widget.insert(0, str(min_val))
+                if command:
+                    command(None)
+
+        sp_entry = ctk.CTkEntry(right_sub_frame, width=40, height=19, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
+        sp_entry.pack(side="left", padx=(0, 2))
+        sp_entry.insert(0, default_sp)
+        sp_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
+        if command:
+            sp_entry.bind("<KeyRelease>", command)
+
+        sp_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
+        sp_btn_frame.pack(side="left")
+        
+        up_btn_s = ctk.CTkButton(sp_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+                                 fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
+                                 command=lambda: adjust_value(sp_entry, 1, 0, 32))
+        up_btn_s.pack(side="top", fill="x")
+        down_btn_s = ctk.CTkButton(sp_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+                                   fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
+                                   command=lambda: adjust_value(sp_entry, -1, 0, 32))
+        down_btn_s.pack(side="bottom", fill="x")
+
+        return sp_entry
 
     def _create_sp_with_rank_row(self, parent, label_var, default_sp="32", default_rank="0", command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -467,6 +521,34 @@ class CalculatorView(ctk.CTkFrame):
             self.atk_sp_label_var.set("공격 [SP] :")
             self.def_sp_stat_label_var.set("방어 [SP] :")
 
+        if move_name in MULTI_STRIKE_MOVES:
+            self.multi_strike_frame.pack(fill="x", pady=1, before=self.atk_nature_combo.master if hasattr(self, "atk_nature_combo") else None)
+            atk_item = self.atk_item_entry.get().strip() if hasattr(self, "atk_item_entry") else ""
+            if atk_item == "속임수주사위":
+                self.multi_strike_combo.configure(values=["4", "5"])
+                if self.multi_strike_combo.get() not in ["4", "5"]:
+                    self.multi_strike_combo.set("4")
+            else:
+                self.multi_strike_combo.configure(values=["2", "3", "4", "5"])
+                if self.multi_strike_combo.get() not in ["2", "3", "4", "5"]:
+                    self.multi_strike_combo.set("3")
+        else:
+            self.multi_strike_frame.pack_forget()
+
+        self.run_calculation()
+
+    def on_item_changed(self, event=None):
+        atk_item = self.atk_item_entry.get().strip()
+        move_name = self.move_name_combo_widget.get().strip()
+        if move_name in MULTI_STRIKE_MOVES:
+            if atk_item == "속임수주사위":
+                self.multi_strike_combo.configure(values=["4", "5"])
+                if self.multi_strike_combo.get() not in ["4", "5"]:
+                    self.multi_strike_combo.set("4")
+            else:
+                self.multi_strike_combo.configure(values=["2", "3", "4", "5"])
+                if self.multi_strike_combo.get() not in ["2", "3", "4", "5"]:
+                    self.multi_strike_combo.set("3")
         self.run_calculation()
 
     def run_calculation(self):
@@ -562,6 +644,13 @@ class CalculatorView(ctk.CTkFrame):
 
             crit = self.crit_var.get()
 
+            hit_count = 1
+            if move_name in MULTI_STRIKE_MOVES:
+                try:
+                    hit_count = int(self.multi_strike_combo.get().strip())
+                except ValueError:
+                    hit_count = 4 if atk_item == "속임수주사위" else 3
+
             move_obj_data = self.move_dict.get(move_name, {})
             contact_val = True if move_obj_data.get("contact") == "o" else False
 
@@ -581,14 +670,52 @@ class CalculatorView(ctk.CTkFrame):
                 weather=weather, field=field, critical=crit, status=status
             )
 
+            single_hit_damages = list(damages)
+
+            if move_name in MULTI_STRIKE_MOVES:
+                damages = [d * hit_count for d in single_hit_damages]
+                percentages = [np.round(d / def_hp * 100, 1) for d in damages]
+
             dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
             dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
+            if move_name in MULTI_STRIKE_MOVES:
+                dmg_output *= hit_count
 
             bulk_calc = DMGoutput_Bulk_Calculator(defender, move)
             phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, def_status, rank_b)
 
             min_dmg, max_dmg = damages[0], damages[-1]
             min_pct, max_pct = percentages[0], percentages[-1]
+
+            if max_dmg <= 0:
+                ko_summary = "0 (효과 없음 / 무효)"
+            else:
+                min_hits = int(np.ceil(def_hp / max_dmg))
+                max_hits = int(np.ceil(def_hp / min_dmg)) if min_dmg > 0 else min_hits + 1
+
+                if min_hits == max_hits:
+                    ko_summary = f"확정 {min_hits}타 (100%)"
+                else:
+                    total_rolls = min_hits * hit_count if move_name in MULTI_STRIKE_MOVES else min_hits
+                    base_damages = single_hit_damages if move_name in MULTI_STRIKE_MOVES else damages
+
+                    counts = {0: 1}
+                    for _ in range(total_rolls):
+                        next_counts = {}
+                        for curr_dmg, freq in counts.items():
+                            for d in base_damages:
+                                new_dmg = curr_dmg + d
+                                next_counts[new_dmg] = next_counts.get(new_dmg, 0) + freq
+                        counts = next_counts
+
+                    ko_cases = sum(freq for total_dmg, freq in counts.items() if total_dmg >= def_hp)
+                    total_cases = 16 ** total_rolls
+                    ko_prob = round((ko_cases / total_cases) * 100, 1)
+
+                    if ko_prob >= 100.0 and ko_cases < total_cases:
+                        ko_prob = 99.9
+
+                    ko_summary = f"난수 {min_hits}타 ({ko_prob}%)"
 
             rank_a_display = f"{rank_a:+d}" if rank_a != 0 else "0"
             rank_b_display = f"{rank_b:+d}" if rank_b != 0 else "0"
@@ -600,10 +727,12 @@ class CalculatorView(ctk.CTkFrame):
                 cat_text_b = "특방[D]"
                 cat_text_a = "특공[C]"
 
+            hit_info_text = f" (총 {hit_count}타)" if move_name in MULTI_STRIKE_MOVES else ""
+
             result_text = f"===== [실시간 배틀 데미지 및 내구 분석] =====\n"
             result_text += f"공격자: {atk_name} (실수치 {cat_text_a}: {atk_stat} / 랭크: {rank_a_display})\n"
             result_text += f"방어자: {def_name} (실수치 체력[HP]: {def_hp} / {cat_text_b}: {def_stat} / 랭크: {rank_b_display})\n"
-            result_text += f"사용 기술: {move_name} ({cat} / 위력: {move_power} / 타입: {move_type})\n"
+            result_text += f"사용 기술: {move_name}{hit_info_text} ({cat} / 위력: {move_power} / 타입: {move_type})\n"
             result_text += f"적용 날씨: {weather if weather else '없음'} / 급소: {'O' if crit else 'X'}\n\n"
             
             result_text += f"🎯 데미지 범위:\n"
@@ -617,7 +746,9 @@ class CalculatorView(ctk.CTkFrame):
                 if (i + 1) % 4 == 0:
                     result_text += "\n"
 
-            result_text += f"\n\n🛡️ [방어자 내구 분석]\n"
+            result_text += f"\n💥{ko_summary}\n"
+
+            result_text += f"\n🛡️ [방어자 내구 분석]\n"
             result_text += f" • 물리 내구치: {phys_bulk}\n"
             result_text += f" • 특수 내구치: {spec_bulk}\n"
 
@@ -628,18 +759,6 @@ class CalculatorView(ctk.CTkFrame):
 
         except Exception as e:
             err_msg = f"⏳ [입력 대기 중] 올바른 포켓몬 이름과 수치를 입력해주세요.\n(세부 오류: {str(e)})"
-            self.result_textbox.configure(state="normal")
-            self.result_textbox.delete("0.1", "end")
-            self.result_textbox.insert("0.1", err_msg)
-            self.result_textbox.configure(state="disabled")
-
-        # except Exception as e:
-        #     import traceback
-        #     error_traceback = traceback.format_exc()
-        #     err_msg = (
-        #         f"❌ [에러 발생]\n{error_traceback}"  # 상세한 줄 번호 포함
-        #     )
-
             self.result_textbox.configure(state="normal")
             self.result_textbox.delete("0.1", "end")
             self.result_textbox.insert("0.1", err_msg)

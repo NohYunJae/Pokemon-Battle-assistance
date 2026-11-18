@@ -54,34 +54,16 @@ HIGH_CRIT_MOVES = {
     "깜빡베기", "섀도크루", "급소찌르기", "크로스포이즌", "스톤에지", 
     "드래곤다이브", "에어슬래시", "공격지령", "솔라블레이드"
 }
-# import numpy as np
-# def round_half_down(x):
-#     return np.floor(x + 0.5 - 1e-12)
-
-# def round_half_up(x):
-#     return np.floor(x + 0.5)
-
-# class Calculate_mods:
-#     def __init__(self):
-#         self.value = 1.0
-
-#     def apply_ability_mod(self, value, mods):
-#         for m in mods:
-#             value = round_half_down(value * m)
-#         return int(value)
-
-#     def apply_other_mods(self, mods):
-#         acc = 4096
-
-#         for m in mods:
-#             acc = round_half_up(acc * m)
-
-#         return (acc / 4096)
-
-    # def ability_mod(self):
-    #     if pkm2_ability == "단단한발톱" and mv_contact:
-    #         move_mods = 1.3
-    #     elif pkm2_ability == "메가런처" and move_name in MEGA_LAUNCHER_MOVES:
-    #         move_mods = 1.5
-    #     elif pkm2_ability == "옹골찬턱" and move_name in STRONG_JAW_MOVES:
-    #         move_mods = 1.5
+MULTI_STRIKE_MOVES = {
+    "록블래스트",
+    "스케일샷",
+    "고드름침",
+    "기관총",
+    "물수리검",
+    "손바닥치기",
+    "바늘미사일",
+    "스위프뺨치기",
+    "뼈다귀러시",
+    "마구할퀴기",
+    "마구찌르기"
+}
