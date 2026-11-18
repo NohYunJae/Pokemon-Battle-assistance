@@ -502,6 +502,28 @@ class CalculatorView(ctk.CTkFrame):
             self.move_name_combo_widget.set(values[0])
         return self.move_name_combo_widget
 
+    def _update_multi_strike_options(self, multi_cat, atk_item):
+        is_loaded_dice = (atk_item == "속임수주사위")
+
+        if multi_cat == "multi_2_5":
+            values = ["4", "5"] if is_loaded_dice else ["2", "3", "4", "5"]
+            default_val = "4" if is_loaded_dice else "3"
+        elif multi_cat == "multi_2":
+            values = ["2"] if is_loaded_dice else ["1", "2"]
+            default_val = "2"
+        elif multi_cat == "multi_3":
+            values = ["3"] if is_loaded_dice else ["1", "2", "3"]
+            default_val = "3"
+        elif multi_cat == "multi_10":
+            values = [str(i) for i in range(4, 11)] if is_loaded_dice else [str(i) for i in range(1, 11)]
+            default_val = "4" if is_loaded_dice else "10"
+        else:
+            return
+
+        self.multi_strike_combo.configure(values=values)
+        if self.multi_strike_combo.get() not in values:
+            self.multi_strike_combo.set(default_val)
+
     def on_move_changed(self, choice=None):
         move_name = (choice if choice else (self.move_name_combo_widget.get() if hasattr(self, "move_name_combo_widget") else "")).strip()
         if not hasattr(self, "move_dict") or not self.move_dict:
@@ -521,17 +543,16 @@ class CalculatorView(ctk.CTkFrame):
             self.atk_sp_label_var.set("공격 [SP] :")
             self.def_sp_stat_label_var.set("방어 [SP] :")
 
-        if move_name in MULTI_STRIKE_MOVES:
+        multi_cat = None
+        for cat, moves in MULTI_STRIKE_MOVES.items():
+            if move_name in moves:
+                multi_cat = cat
+                break
+
+        if multi_cat:
             self.multi_strike_frame.pack(fill="x", pady=1, before=self.atk_nature_combo.master if hasattr(self, "atk_nature_combo") else None)
             atk_item = self.atk_item_entry.get().strip() if hasattr(self, "atk_item_entry") else ""
-            if atk_item == "속임수주사위":
-                self.multi_strike_combo.configure(values=["4", "5"])
-                if self.multi_strike_combo.get() not in ["4", "5"]:
-                    self.multi_strike_combo.set("4")
-            else:
-                self.multi_strike_combo.configure(values=["2", "3", "4", "5"])
-                if self.multi_strike_combo.get() not in ["2", "3", "4", "5"]:
-                    self.multi_strike_combo.set("3")
+            self._update_multi_strike_options(multi_cat, atk_item)
         else:
             self.multi_strike_frame.pack_forget()
 
@@ -540,15 +561,15 @@ class CalculatorView(ctk.CTkFrame):
     def on_item_changed(self, event=None):
         atk_item = self.atk_item_entry.get().strip()
         move_name = self.move_name_combo_widget.get().strip()
-        if move_name in MULTI_STRIKE_MOVES:
-            if atk_item == "속임수주사위":
-                self.multi_strike_combo.configure(values=["4", "5"])
-                if self.multi_strike_combo.get() not in ["4", "5"]:
-                    self.multi_strike_combo.set("4")
-            else:
-                self.multi_strike_combo.configure(values=["2", "3", "4", "5"])
-                if self.multi_strike_combo.get() not in ["2", "3", "4", "5"]:
-                    self.multi_strike_combo.set("3")
+        
+        multi_cat = None
+        for cat, moves in MULTI_STRIKE_MOVES.items():
+            if move_name in moves:
+                multi_cat = cat
+                break
+
+        if multi_cat:
+            self._update_multi_strike_options(multi_cat, atk_item)
         self.run_calculation()
 
     def run_calculation(self):
@@ -644,12 +665,28 @@ class CalculatorView(ctk.CTkFrame):
 
             crit = self.crit_var.get()
 
+            is_multi = False
+            multi_cat = None
+            for cat_key, moves in MULTI_STRIKE_MOVES.items():
+                if move_name in moves:
+                    is_multi = True
+                    multi_cat = cat_key
+                    break
+
             hit_count = 1
-            if move_name in MULTI_STRIKE_MOVES:
+            if is_multi:
                 try:
                     hit_count = int(self.multi_strike_combo.get().strip())
                 except ValueError:
-                    hit_count = 4 if atk_item == "속임수주사위" else 3
+                    is_loaded_dice = (atk_item == "속임수주사위")
+                    if multi_cat == "multi_2_5":
+                        hit_count = 4 if is_loaded_dice else 3
+                    elif multi_cat == "multi_2":
+                        hit_count = 2
+                    elif multi_cat == "multi_3":
+                        hit_count = 3
+                    elif multi_cat == "multi_10":
+                        hit_count = 4 if is_loaded_dice else 10
 
             move_obj_data = self.move_dict.get(move_name, {})
             contact_val = True if move_obj_data.get("contact") == "o" else False
@@ -664,22 +701,61 @@ class CalculatorView(ctk.CTkFrame):
                 name=move_name, power=move_power, type=move_type, category=cat, contact=contact_val
             )
 
-            calc = BattleCalculator(attacker, defender, move)
-            damages, percentages = calc.calculate_damage(
-                atk_stat, def_stat, def_hp, rank_a=rank_a, rank_b=rank_b, 
-                weather=weather, field=field, critical=crit, status=status
-            )
+            if is_multi:
+                if move_name in ["트리플킥", "트리플악셀"]:
+                    hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[move_name][:hit_count]
+                    total_damages = [0] * 16
+                    single_hit_damages_list = []
+                    for p in hit_powers:
+                        temp_move = DummyObject(
+                            name=move_name, power=p, type=move_type, category=cat, contact=contact_val
+                        )
+                        temp_calc = BattleCalculator(attacker, defender, temp_move)
+                        d_list, _ = temp_calc.calculate_damage(
+                            atk_stat, def_stat, def_hp, rank_a=rank_a, rank_b=rank_b, 
+                            weather=weather, field=field, critical=crit, status=status
+                        )
+                        single_hit_damages_list.append(d_list)
+                        for i in range(16):
+                            total_damages[i] += d_list[i]
+                    damages = total_damages
+                    percentages = [np.round(d / def_hp * 100, 1) for d in damages]
+                    single_hit_damages = single_hit_damages_list[0]
+                else:
+                    calc = BattleCalculator(attacker, defender, move)
+                    damages, percentages = calc.calculate_damage(
+                        atk_stat, def_stat, def_hp, rank_a=rank_a, rank_b=rank_b, 
+                        weather=weather, field=field, critical=crit, status=status
+                    )
+                    single_hit_damages = list(damages)
+                    damages = [d * hit_count for d in single_hit_damages]
+                    percentages = [np.round(d / def_hp * 100, 1) for d in damages]
+            else:
+                calc = BattleCalculator(attacker, defender, move)
+                damages, percentages = calc.calculate_damage(
+                    atk_stat, def_stat, def_hp, rank_a=rank_a, rank_b=rank_b, 
+                    weather=weather, field=field, critical=crit, status=status
+                )
+                single_hit_damages = list(damages)
 
-            single_hit_damages = list(damages)
-
-            if move_name in MULTI_STRIKE_MOVES:
-                damages = [d * hit_count for d in single_hit_damages]
-                percentages = [np.round(d / def_hp * 100, 1) for d in damages]
-
-            dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
-            dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
-            if move_name in MULTI_STRIKE_MOVES:
-                dmg_output *= hit_count
+            if is_multi:
+                if move_name in ["트리플킥", "트리플악셀"]:
+                    hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[move_name][:hit_count]
+                    total_dmg_output = 0
+                    for p in hit_powers:
+                        temp_move = DummyObject(
+                            name=move_name, power=p, type=move_type, category=cat, contact=contact_val
+                        )
+                        temp_dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, temp_move)
+                        total_dmg_output += temp_dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
+                    dmg_output = total_dmg_output
+                else:
+                    dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
+                    dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
+                    dmg_output *= hit_count
+            else:
+                dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
+                dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
 
             bulk_calc = DMGoutput_Bulk_Calculator(defender, move)
             phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, def_status, rank_b)
@@ -696,8 +772,8 @@ class CalculatorView(ctk.CTkFrame):
                 if min_hits == max_hits:
                     ko_summary = f"확정 {min_hits}타 (100%)"
                 else:
-                    total_rolls = min_hits * hit_count if move_name in MULTI_STRIKE_MOVES else min_hits
-                    base_damages = single_hit_damages if move_name in MULTI_STRIKE_MOVES else damages
+                    total_rolls = min_hits * hit_count if (is_multi and move_name not in ["트리플킥", "트리플악셀"]) else min_hits
+                    base_damages = single_hit_damages if (is_multi and move_name not in ["트리플킥", "트리플악셀"]) else damages
 
                     counts = {0: 1}
                     for _ in range(total_rolls):
@@ -727,7 +803,7 @@ class CalculatorView(ctk.CTkFrame):
                 cat_text_b = "특방[D]"
                 cat_text_a = "특공[C]"
 
-            hit_info_text = f" (총 {hit_count}타)" if move_name in MULTI_STRIKE_MOVES else ""
+            hit_info_text = f" (총 {hit_count}타)" if is_multi else ""
 
             result_text = f"===== [실시간 배틀 데미지 및 내구 분석] =====\n"
             result_text += f"공격자: {atk_name} (실수치 {cat_text_a}: {atk_stat} / 랭크: {rank_a_display})\n"
