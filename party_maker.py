@@ -466,82 +466,82 @@ class PokemonSelector:
         return general_recommendations[:100], mega_recommendations, common_weaknesses, common_not_resisted, recommended_attack_types
 
 
-def test_recommend_combined(test_samples):
-    """방어 및 공격 상성을 분리 후 종합한 포켓몬 추천 테스트 함수"""
-    print("=== [방어 + 공격 상성 분리 및 종합 추천 테스트] ===")
-    try:
-        selector = PokemonSelector()
-        general_top100, mega_list, common_weaknesses, common_not_resisted, recommended_attack_types = selector.recommend_pokemon_combined(test_samples)
+# def test_recommend_combined(test_samples):
+#     """방어 및 공격 상성을 분리 후 종합한 포켓몬 추천 테스트 함수"""
+#     print("=== [방어 + 공격 상성 분리 및 종합 추천 테스트] ===")
+#     try:
+#         selector = PokemonSelector()
+#         general_top100, mega_list, common_weaknesses, common_not_resisted, recommended_attack_types = selector.recommend_pokemon_combined(test_samples)
         
-        # 1. 파티 방어 취약 타입 분석 현황 출력 추가
-        print("\n[파티 방어 취약 타입 분석 현황]")
-        print("  • 공통 약점 타입 (1순위 보완 대상):")
-        if common_weaknesses:
-            for w_type, cnt in common_weaknesses.items():
-                print(f"    - {w_type}: {cnt}마리")
-        else:
-            print("    - 없음")
+#         # 1. 파티 방어 취약 타입 분석 현황 출력 추가
+#         print("\n[파티 방어 취약 타입 분석 현황]")
+#         print("  • 공통 약점 타입 (1순위 보완 대상):")
+#         if common_weaknesses:
+#             for w_type, cnt in common_weaknesses.items():
+#                 print(f"    - {w_type}: {cnt}마리")
+#         else:
+#             print("    - 없음")
             
-        print("  • 반감 불가 타입 (2순위 보완 대상):")
-        if common_not_resisted:
-            for nr_type, cnt in common_not_resisted.items():
-                print(f"    - {nr_type}: {cnt}마리")
-        else:
-            print("    - 없음")
+#         print("  • 반감 불가 타입 (2순위 보완 대상):")
+#         if common_not_resisted:
+#             for nr_type, cnt in common_not_resisted.items():
+#                 print(f"    - {nr_type}: {cnt}마리")
+#         else:
+#             print("    - 없음")
 
-        # 2. 파티 추천 공격 타입 출력
-        print("\n[파티 추천 공격 타입 (자속 반영 대상 상위)]")
-        if recommended_attack_types:
-            for idx, rec in enumerate(recommended_attack_types[:3], 1):
-                print(f"  {idx}. {rec['타입']} (커버 가능한 방어 조합 수: {rec['커버가능조합수']}개)")
-        else:
-            print("  - 추천 공격 타입 없음")
+#         # 2. 파티 추천 공격 타입 출력
+#         print("\n[파티 추천 공격 타입 (자속 반영 대상 상위)]")
+#         if recommended_attack_types:
+#             for idx, rec in enumerate(recommended_attack_types[:3], 1):
+#                 print(f"  {idx}. {rec['타입']} (커버 가능한 방어 조합 수: {rec['커버가능조합수']}개)")
+#         else:
+#             print("  - 추천 공격 타입 없음")
 
-        # 3. 일반 포켓몬 종합 추천 결과 출력
-        print(f"\n✨ [일반 포켓몬] 종합 추천 상위 {len(general_top100)}마리:\n")
-        if general_top100:
-            for idx, item in enumerate(general_top100, 1):
-                p_name = item["name"]
-                p_types = '/'.join(item["types"])
-                c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
-                o_types = ', '.join(item["matched_offense_types"]) if item["matched_offense_types"] else "없음"
-                print(f"  {idx:2d}. [{p_name}] (타입: {p_types})")
-                print(      f"      🛡️ 방어 보완: {c_types}")
-                print(      f"      ⚔️ 자속 공격 보완: {o_types}")
-                print(      f"      📊 점수 내역: 총점 {item['total_score']:.1f}점 (방어안전성: {item['safety_score']}점 / 약점커버: {item['weakness_score']}개 / 반감불가커버: {item['not_resisted_score']}개 / 자속공격보완: {item['offense_score']}개)")
-                print("-" * 75)
-        else:
-            print("  - 조건을 만족하는 일반 포켓몬이 없습니다.")
+#         # 3. 일반 포켓몬 종합 추천 결과 출력
+#         print(f"\n✨ [일반 포켓몬] 종합 추천 상위 {len(general_top100)}마리:\n")
+#         if general_top100:
+#             for idx, item in enumerate(general_top100, 1):
+#                 p_name = item["name"]
+#                 p_types = '/'.join(item["types"])
+#                 c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
+#                 o_types = ', '.join(item["matched_offense_types"]) if item["matched_offense_types"] else "없음"
+#                 print(f"  {idx:2d}. [{p_name}] (타입: {p_types})")
+#                 print(      f"      🛡️ 방어 보완: {c_types}")
+#                 print(      f"      ⚔️ 자속 공격 보완: {o_types}")
+#                 print(      f"      📊 점수 내역: 총점 {item['total_score']:.1f}점 (방어안전성: {item['safety_score']}점 / 약점커버: {item['weakness_score']}개 / 반감불가커버: {item['not_resisted_score']}개 / 자속공격보완: {item['offense_score']}개)")
+#                 print("-" * 75)
+#         else:
+#             print("  - 조건을 만족하는 일반 포켓몬이 없습니다.")
 
-        # 4. 메가진화 포켓몬 종합 추천 결과 출력
-        print(f"\n✨ [메가진화 포켓몬] 종합 추천 상위 {len(mega_list)}마리:\n")
-        if mega_list:
-            for idx, item in enumerate(mega_list, 1):
-                p_name = item["name"]
-                p_types = '/'.join(item["types"])
-                c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
-                o_types = ', '.join(item["matched_offense_types"]) if item["matched_offense_types"] else "없음"
-                print(f"  {idx:2d}. [{p_name}] (타입: {p_types})")
-                print(      f"      🛡️ 방어 보완: {c_types}")
-                print(      f"      ⚔️ 자속 공격 보완: {o_types}")
-                print(      f"      📊 점수 내역: 총점 {item['total_score']:.1f}점 (방어안전성: {item['safety_score']}점 / 약점커버: {item['weakness_score']}개 / 반감불가커버: {item['not_resisted_score']}개 / 자속공격보완: {item['offense_score']}개)")
-                print("-" * 75)
-        else:
-            print("  - 조건을 만족하는 메가진화 포켓몬이 없습니다.")
+#         # 4. 메가진화 포켓몬 종합 추천 결과 출력
+#         print(f"\n✨ [메가진화 포켓몬] 종합 추천 상위 {len(mega_list)}마리:\n")
+#         if mega_list:
+#             for idx, item in enumerate(mega_list, 1):
+#                 p_name = item["name"]
+#                 p_types = '/'.join(item["types"])
+#                 c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
+#                 o_types = ', '.join(item["matched_offense_types"]) if item["matched_offense_types"] else "없음"
+#                 print(f"  {idx:2d}. [{p_name}] (타입: {p_types})")
+#                 print(      f"      🛡️ 방어 보완: {c_types}")
+#                 print(      f"      ⚔️ 자속 공격 보완: {o_types}")
+#                 print(      f"      📊 점수 내역: 총점 {item['total_score']:.1f}점 (방어안전성: {item['safety_score']}점 / 약점커버: {item['weakness_score']}개 / 반감불가커버: {item['not_resisted_score']}개 / 자속공격보완: {item['offense_score']}개)")
+#                 print("-" * 75)
+#         else:
+#             print("  - 조건을 만족하는 메가진화 포켓몬이 없습니다.")
             
-    except Exception as e:
-        print(f"\n❌ 에러 발생: {e}")
-        traceback.print_exc()
+#     except Exception as e:
+#         print(f"\n❌ 에러 발생: {e}")
+#         traceback.print_exc()
 
 
-if __name__ == "__main__":
-    test_samples = [
-        "트릭룸메갑주",
-        "HB자뭉한카",
-        "HC누리레느",
-        "고집생구마스카나",
-        "내구조정와자몽",
-        "트릭룸브리무음"
-    ]
-    # test_recommend(test_samples)
-    test_recommend_combined(test_samples)
+# if __name__ == "__main__":
+#     test_samples = [
+#         "트릭룸메갑주",
+#         "HB자뭉한카",
+#         "HC누리레느",
+#         "고집생구마스카나",
+#         "내구조정와자몽",
+#         "트릭룸브리무음"
+#     ]
+#     # test_recommend(test_samples)
+#     test_recommend_combined(test_samples)
