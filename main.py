@@ -7,6 +7,7 @@ from views.sample_view import SampleView
 from views.battle_view import BattleView
 from views.optimizer_view import OptimizerView
 from views.spd_calc_view import SpdCalculatorView
+from views.party_view import PartyView
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 
@@ -27,6 +28,7 @@ MAIN_UI_CONFIG = {
 ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
 
+
 class BTAssistanceApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -35,12 +37,12 @@ class BTAssistanceApp(ctk.CTk):
         self.geometry("1100x750")
         self.resizable(False, False)
 
-        bg_image_path = os.path.join(DATA_DIR, 'images', 'bg_lg_img.png')
+        bg_image_path = os.path.join(DATA_DIR, "images", "bg_lg_img.png")
 
         if os.path.exists(bg_image_path):
             pil_img = Image.open(bg_image_path).resize((1100, 750), Image.Resampling.LANCZOS)
             self.bg_image = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(1100, 750))
-            
+
             self.bg_label = ctk.CTkLabel(self, image=self.bg_image, text="")
             self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         else:
@@ -54,7 +56,7 @@ class BTAssistanceApp(ctk.CTk):
             fg_color="#E0F2FE",
             corner_radius=10,
             border_width=2,
-            border_color="#0284C7"
+            border_color="#0284C7",
         )
         self.card_box.pack(fill="both", expand=True, padx=0, pady=0)
 
@@ -66,7 +68,8 @@ class BTAssistanceApp(ctk.CTk):
             ("2. 스피드 비교", "spd_calc"),
             ("3. 샘플 생성기", "sample"),
             ("4. 배틀 시트", "battle"),
-            ("5. 스탯 최적화", "optimizer")
+            ("5. 스탯 최적화", "optimizer"),
+            ("6. 파티 분석", "party"),
         ]
 
         self.tab_buttons = {}
@@ -82,7 +85,7 @@ class BTAssistanceApp(ctk.CTk):
                 corner_radius=8,
                 fg_color=MAIN_UI_CONFIG["tab_unselected_bg"],
                 hover_color=MAIN_UI_CONFIG["tab_unselected_hover"],
-                text_color=MAIN_UI_CONFIG["tab_text_unselected"]
+                text_color=MAIN_UI_CONFIG["tab_text_unselected"],
             )
             btn.pack(side="top", pady=(0, 6), fill="x")
             self.tab_buttons[tab_key] = btn
@@ -96,21 +99,26 @@ class BTAssistanceApp(ctk.CTk):
         self.tab_sample = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.tab_battle = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.tab_optimizer = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self.tab_party = ctk.CTkFrame(self.content_container, fg_color="transparent")
 
         self._tabs = {
             "calculator": self.tab_calculator,
             "spd_calc": self.tab_spd_calc,
             "sample": self.tab_sample,
             "battle": self.tab_battle,
-            "optimizer": self.tab_optimizer
+            "optimizer": self.tab_optimizer,
+            "party": self.tab_party,
         }
 
         # 뷰 인스턴스 연결
+        font_family = MAIN_UI_CONFIG["font_family"]
         self.calculator_view = CalculatorView(self.tab_calculator)
         self.spd_calc_view = SpdCalculatorView(self.tab_spd_calc)
         self.sample_view = SampleView(self.tab_sample)
         self.battle_view = BattleView(self.tab_battle)
         self.optimizer_view = OptimizerView(self.tab_optimizer)
+        self.party_view = PartyView(self.tab_party, font_family=font_family)
+        self.party_view.pack(fill="both", expand=True)
 
         self._select_tab("calculator")
 
@@ -120,13 +128,13 @@ class BTAssistanceApp(ctk.CTk):
                 btn.configure(
                     fg_color=MAIN_UI_CONFIG["tab_selected_bg"],
                     hover_color=MAIN_UI_CONFIG["tab_selected_hover"],
-                    text_color=MAIN_UI_CONFIG["tab_text_selected"]
+                    text_color=MAIN_UI_CONFIG["tab_text_selected"],
                 )
             else:
                 btn.configure(
                     fg_color=MAIN_UI_CONFIG["tab_unselected_bg"],
                     hover_color=MAIN_UI_CONFIG["tab_unselected_hover"],
-                    text_color=MAIN_UI_CONFIG["tab_text_unselected"]
+                    text_color=MAIN_UI_CONFIG["tab_text_unselected"],
                 )
 
         for key, frame in self._tabs.items():
@@ -134,6 +142,7 @@ class BTAssistanceApp(ctk.CTk):
                 frame.pack(fill="both", expand=True, padx=0, pady=0)
             else:
                 frame.pack_forget()
+
 
 if __name__ == "__main__":
     app = BTAssistanceApp()

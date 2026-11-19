@@ -13,6 +13,7 @@ DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 SAMPLES_DIR = os.path.join(DATA_DIR, "samples")
 FONT_FAMILY = "Malgun Gothic"
 
+
 class StdoutRedirector:
     def __init__(self, text_widget):
         self.text_widget = text_widget
@@ -47,9 +48,10 @@ class OptimizerView:
         self.raw_optimization_options = []
 
         self.create_widgets()
-        
+
         sys.stdout = StdoutRedirector(self.result_box)
         self._init_default_choices()
+        self.sync_regen_target_sample()
         print("[시스템] 준비 완료. 샘플 파일을 선택하고 최적화를 실행하세요.")
         threading.Thread(target=self._load_cache_background, daemon=True).start()
 
@@ -61,6 +63,39 @@ class OptimizerView:
             return files if files else ["기본샘플"]
         except Exception:
             return ["기본샘플"]
+
+    def get_current_active_sample(self) -> str:
+        try:
+            current_tab = self.opt_tabs.get() if hasattr(self, "opt_tabs") else ""
+            if current_tab == "속도 최적화" and hasattr(self, "speed_pkm1"):
+                return self.speed_pkm1.get().strip()
+            elif current_tab == "결정력 최적화" and hasattr(self, "power_pkm1"):
+                return self.power_pkm1.get().strip()
+            elif current_tab == "내구 최적화" and hasattr(self, "bulk_pkm1"):
+                return self.bulk_pkm1.get().strip()
+        except Exception:
+            pass
+        return self.sample_files[0] if self.sample_files else ""
+
+    def _update_regen_filename(self, sample_name: str):
+        if not hasattr(self, "regen_filename_entry"):
+            return
+        if not sample_name:
+            return
+        formatted_name = sample_name if sample_name.startswith("[opt]") else f"[opt]{sample_name}"
+        self.regen_filename_entry.delete(0, "end")
+        self.regen_filename_entry.insert(0, formatted_name)
+
+    def sync_regen_target_sample(self, *_args):
+        if not hasattr(self, "regen_target_combo"):
+            return
+        active_sample = self.get_current_active_sample()
+        if active_sample and active_sample in self.sample_files:
+            self.regen_target_combo.set(active_sample)
+            self._update_regen_filename(active_sample)
+        elif self.sample_files:
+            self.regen_target_combo.set(self.sample_files[0])
+            self._update_regen_filename(self.sample_files[0])
 
     def refresh_samples(self):
         self.sample_files = self._get_sample_file_list()
@@ -75,6 +110,8 @@ class OptimizerView:
                         widget.set(current_val)
                     elif self.sample_files:
                         widget.set(self.sample_files[0])
+
+        self.sync_regen_target_sample()
         print("[시스템] 샘플 목록이 새로고침 되었습니다.")
 
     def _load_cache_background(self):
@@ -110,7 +147,14 @@ class OptimizerView:
         left_frame.pack_propagate(False)
         left_frame.pack(side="left", fill="y", expand=False, padx=(0, 4), pady=2)
 
-        self.opt_tabs = ctk.CTkTabview(left_frame, fg_color="transparent", segmented_button_fg_color="#DBF4FF", segmented_button_selected_color="#ef4444", segmented_button_selected_hover_color="#dc2626")
+        self.opt_tabs = ctk.CTkTabview(
+            left_frame,
+            fg_color="transparent",
+            segmented_button_fg_color="#DBF4FF",
+            segmented_button_selected_color="#ef4444",
+            segmented_button_selected_hover_color="#dc2626",
+            command=self.sync_regen_target_sample,
+        )
         self.opt_tabs._segmented_button.configure(font=(FONT_FAMILY, 12, "bold"))
         self.opt_tabs.pack(fill="both", expand=True, padx=6, pady=6)
 
@@ -126,9 +170,9 @@ class OptimizerView:
         right_frame.pack(side="right", fill="both", expand=True, padx=(4, 0), pady=2)
 
         ctk.CTkLabel(right_frame, text="[최적화 결과 리포트]", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=12, weight="bold")).pack(anchor="w", padx=10, pady=(8, 4))
-        
+
         self.result_box = ctk.CTkTextbox(
-            right_frame, fg_color="#ffffff", text_color="#000000", corner_radius=8, 
+            right_frame, fg_color="#ffffff", text_color="#000000", corner_radius=8,
             border_width=1, border_color="#000000", font=(FONT_FAMILY, 11)
         )
         self.result_box.pack(fill="both", expand=True, padx=8, pady=(0, 4))
@@ -148,14 +192,14 @@ class OptimizerView:
 
         manual_sp_grid = ctk.CTkFrame(regen_frame, fg_color="transparent")
         manual_sp_grid.pack(fill="x", padx=8, pady=2)
-        
+
         sp_labels = ["H", "A", "B", "C", "D", "S"]
         self.manual_sp_entries = {}
-        
+
         for i, stat in enumerate(sp_labels):
             manual_sp_grid.grid_columnconfigure(i*2, weight=0)
             manual_sp_grid.grid_columnconfigure(i*2+1, weight=1)
-            
+
             ctk.CTkLabel(manual_sp_grid, text=f"{stat}:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold")).grid(row=0, column=i*2, sticky="e", padx=(2, 2), pady=2)
             entry = ctk.CTkEntry(manual_sp_grid, width=32, height=22, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
             entry.grid(row=0, column=i*2+1, sticky="ew", padx=(0, 4), pady=2)
@@ -168,9 +212,18 @@ class OptimizerView:
         regen_grid.grid_columnconfigure(2, weight=0)
 
         ctk.CTkLabel(regen_grid, text="대상 샘플:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=2)
-        self.regen_target_combo = ctk.CTkComboBox(regen_grid, values=self.sample_files, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.regen_target_combo = ctk.CTkComboBox(
+            regen_grid,
+            values=self.sample_files,
+            height=24,
+            fg_color="#FFFFFF",
+            border_color="#000000",
+            border_width=1,
+            text_color="#000000",
+            command=self._update_regen_filename,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         self.regen_target_combo.grid(row=0, column=1, sticky="ew", pady=2)
-        if self.sample_files: self.regen_target_combo.set(self.sample_files[0])
 
         refresh_btn = ctk.CTkButton(regen_grid, text="목록 갱신", width=80, height=24, fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"), command=self.refresh_samples)
         refresh_btn.grid(row=0, column=2, padx=(4, 0), pady=2)
@@ -178,7 +231,11 @@ class OptimizerView:
         ctk.CTkLabel(regen_grid, text="저장 파일명:", text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=10)).grid(row=1, column=0, sticky="w", padx=(0, 4), pady=2)
         self.regen_filename_entry = ctk.CTkEntry(regen_grid, height=24, fg_color="#FFFFFF", border_color="#000000", border_width=1, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.regen_filename_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=2)
-        self.regen_filename_entry.insert(0, "[opt]파일명")
+
+        initial_sample = self.sample_files[0] if self.sample_files else "파일명"
+        if self.sample_files:
+            self.regen_target_combo.set(initial_sample)
+        self._update_regen_filename(initial_sample)
 
         regen_btn = ctk.CTkButton(regen_frame, text="샘플 재생성/저장", fg_color="#3b82f6", hover_color="#1d4ed8", text_color="#ffffff", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), height=26, command=self.regenerate_sample_file)
         regen_btn.pack(fill="x", padx=8, pady=(2, 8))
@@ -221,14 +278,16 @@ class OptimizerView:
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
         ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=4, padx=(2, 8))
-        self.speed_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.speed_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=self.sync_regen_target_sample, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_pkm1.grid(row=1, column=1, sticky="ew", pady=4)
-        if self.sample_files: self.speed_pkm1.set(self.sample_files[0])
+        if self.sample_files:
+            self.speed_pkm1.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=4, padx=(2, 8))
         self.speed_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.speed_pkm2.grid(row=2, column=1, sticky="ew", pady=4)
-        if self.sample_files: self.speed_pkm2.set(self.sample_files[0])
+        if self.sample_files:
+            self.speed_pkm2.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="사용 가능 SP:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=4, padx=(2, 8))
         self.speed_sp_av = ctk.CTkEntry(scroll_f, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
@@ -262,17 +321,30 @@ class OptimizerView:
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
         ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.power_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_power_moves(), font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.power_pkm1 = ctk.CTkComboBox(
+            scroll_f,
+            values=self.sample_files,
+            width=145,
+            height=26,
+            fg_color="#DBF4FF",
+            border_color="#000000",
+            border_width=1.5,
+            text_color="#000000",
+            command=lambda x: (self._update_power_moves(), self.sync_regen_target_sample()),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         self.power_pkm1.grid(row=1, column=1, sticky="ew", pady=3)
-        if self.sample_files: self.power_pkm1.set(self.sample_files[0])
+        if self.sample_files:
+            self.power_pkm1.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
         self.power_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.power_pkm2.grid(row=2, column=1, sticky="ew", pady=3)
-        if self.sample_files: self.power_pkm2.set(self.sample_files[0])
+        if self.sample_files:
+            self.power_pkm2.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="기술 선택:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
-        
+
         power_move_frame = ctk.CTkFrame(scroll_f, fg_color="transparent")
         power_move_frame.grid(row=3, column=1, sticky="ew", pady=3)
         power_move_frame.grid_columnconfigure(0, weight=1)
@@ -284,10 +356,10 @@ class OptimizerView:
         add_power_btn.pack(side="right")
 
         ctk.CTkLabel(scroll_f, text="선택된 기술:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
-        
+
         self.power_tags_container = ctk.CTkScrollableFrame(scroll_f, orientation="horizontal", fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=6, height=50)
         self.power_tags_container.grid(row=4, column=1, sticky="ew", pady=3)
-        
+
         self.power_tags_frame = ctk.CTkFrame(self.power_tags_container, fg_color="transparent")
         self.power_tags_frame.pack(side="left", anchor="w")
 
@@ -363,17 +435,19 @@ class OptimizerView:
         refresh_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 6), padx=2)
 
         ctk.CTkLabel(scroll_f, text="내 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=1, column=0, sticky="w", pady=3, padx=(2, 8))
-        self.bulk_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.bulk_pkm1 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=self.sync_regen_target_sample, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_pkm1.grid(row=1, column=1, sticky="ew", pady=3)
-        if self.sample_files: self.bulk_pkm1.set(self.sample_files[0])
+        if self.sample_files:
+            self.bulk_pkm1.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="상대 샘플 파일:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=2, column=0, sticky="w", pady=3, padx=(2, 8))
         self.bulk_pkm2 = ctk.CTkComboBox(scroll_f, values=self.sample_files, width=145, height=26, fg_color="#DBF4FF", border_color="#000000", border_width=1.5, text_color="#000000", command=lambda x: self._update_bulk_moves(), font=ctk.CTkFont(family=FONT_FAMILY, size=11))
         self.bulk_pkm2.grid(row=2, column=1, sticky="ew", pady=3)
-        if self.sample_files: self.bulk_pkm2.set(self.sample_files[0])
+        if self.sample_files:
+            self.bulk_pkm2.set(self.sample_files[0])
 
         ctk.CTkLabel(scroll_f, text="상대 기술 선택:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=3, column=0, sticky="w", pady=3, padx=(2, 8))
-        
+
         bulk_move_frame = ctk.CTkFrame(scroll_f, fg_color="transparent")
         bulk_move_frame.grid(row=3, column=1, sticky="ew", pady=3)
         bulk_move_frame.grid_columnconfigure(0, weight=1)
@@ -385,10 +459,10 @@ class OptimizerView:
         add_bulk_btn.pack(side="right")
 
         ctk.CTkLabel(scroll_f, text="선택된 상대 기술:", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color="#000000").grid(row=4, column=0, sticky="nw", pady=3, padx=(2, 8))
-        
+
         self.bulk_tags_container = ctk.CTkScrollableFrame(scroll_f, orientation="horizontal", fg_color="#FFFFFF", border_width=1, border_color="#000000", corner_radius=6, height=50)
         self.bulk_tags_container.grid(row=4, column=1, sticky="ew", pady=3)
-        
+
         self.bulk_tags_frame = ctk.CTkFrame(self.bulk_tags_container, fg_color="transparent")
         self.bulk_tags_frame.pack(side="left", anchor="w")
 
@@ -540,6 +614,7 @@ class OptimizerView:
 
     def run_speed_optimization(self):
         try:
+            self.sync_regen_target_sample()
             print(f"\n[속도 최적화 실행 중: {self.speed_pkm1.get()} vs {self.speed_pkm2.get()}]")
             p1_samplefile = self.speed_pkm1.get().strip()
             p2_samplefile = self.speed_pkm2.get().strip()
@@ -553,7 +628,7 @@ class OptimizerView:
 
             optimizer = PokemonStatOptimizer()
             result = optimizer.optimize_speed_advanced(p1_data, p2_data, sp_av, nature_s, rank, item_val)
-            
+
             self.optimization_choices = ["무보정 (SP = 0)", f"남은 스탯 전부 투자 (SP = {sp_av})"]
             self.raw_optimization_options = [
                 {"type": "SPs", "SPs": [self.latest_optimized_sp["H"], self.latest_optimized_sp["A"], self.latest_optimized_sp["B"], self.latest_optimized_sp["C"], self.latest_optimized_sp["D"], 0]},
@@ -565,7 +640,7 @@ class OptimizerView:
                     desc = f"속도 SP: {row['SP']} (실수치: {row['실수치']})"
                     self.optimization_choices.append(desc)
                     self.raw_optimization_options.append({"type": "speed_row", "SP": row['SP']})
-            
+
             if self.optimization_choices:
                 self.result_select_combo.configure(values=self.optimization_choices)
                 self.result_select_combo.set(self.optimization_choices[0])
@@ -576,6 +651,7 @@ class OptimizerView:
 
     def run_power_optimization(self):
         try:
+            self.sync_regen_target_sample()
             print(f"\n[결정력 최적화 실행 중: {self.power_pkm1.get()} -> {self.power_pkm2.get()}]")
             if not self.power_selected_moves:
                 print("[경고] 최소 하나 이상의 기술을 추가해주세요.")
@@ -586,7 +662,7 @@ class OptimizerView:
 
             p1_data = self._load_sample_csv_data(p1_samplefile)
             moves_list = p1_data.get("기술", [])
-            
+
             move_indices = []
             for m in self.power_selected_moves:
                 try:
@@ -596,7 +672,7 @@ class OptimizerView:
 
             from loader.data_loader import Move
             loaded_move_dict = Move.load_move_dict()
-            
+
             first_move_name = self.power_selected_moves[0]
             move_obj = loaded_move_dict.get(first_move_name)
             stat_type = "A"
@@ -612,7 +688,7 @@ class OptimizerView:
             current_hp_percent = float(self.power_current_hp.get().strip() or "100")
             hits = int(self.power_hits.get().strip() or "1")
             target_prob = float(self.power_target_prob.get().strip() or "16")
-            
+
             status_a = self.power_status_a.get().strip() or None
             status_b = self.power_status_b.get().strip() or None
             status = [status_a, status_b]
@@ -625,14 +701,14 @@ class OptimizerView:
             p2_data = self._load_sample_csv_data(p2_samplefile)
 
             optimizer = PokemonStatOptimizer()
-            
+
             result = optimizer.optimize_power_advanced(
-                p1_data, p2_data, move_indices, nature_a, rank_a, rank_b, 
+                p1_data, p2_data, move_indices, nature_a, rank_a, rank_b,
                 hits, target_prob, weather, field, crit_a, status, sp_av, current_hp_percent
             )
-            
+
             self.optimization_choices = ["무보정 (SP = 0)", f"남은 스탯 전부 투자 (SP = {sp_av})"]
-            
+
             h_curr = self.latest_optimized_sp.get("H", 0)
             a_curr = self.latest_optimized_sp.get("A", 0)
             b_curr = self.latest_optimized_sp.get("B", 0)
@@ -654,7 +730,7 @@ class OptimizerView:
                 desc = f"{stat_name_kr} SP: {optimized_sp_val} (실수치: {result['A']}, K.O확률: {result['ko_probability']}%)"
                 self.optimization_choices.append(desc)
                 self.raw_optimization_options.append({"type": "power_res", "stat_type": stat_type, "sp_val": optimized_sp_val})
-                
+
                 self.result_select_combo.configure(values=self.optimization_choices)
                 self.result_select_combo.set(self.optimization_choices[0])
                 self.on_result_option_selected(self.optimization_choices[0])
@@ -665,6 +741,7 @@ class OptimizerView:
 
     def run_bulk_optimization(self):
         try:
+            self.sync_regen_target_sample()
             print(f"\n[내구 최적화 실행 중: {self.bulk_pkm1.get()} vs {self.bulk_pkm2.get()}]")
             if not self.bulk_selected_moves:
                 print("[경고] 최소 하나 이상의 상대 기술을 추가해주세요.")
@@ -675,7 +752,7 @@ class OptimizerView:
 
             p2_data = self._load_sample_csv_data(p2_samplefile)
             moves_list = p2_data.get("기술", [])
-            
+
             move_indices = []
             for m in self.bulk_selected_moves:
                 try:
@@ -694,7 +771,7 @@ class OptimizerView:
             w_spdef = float(self.bulk_w_spdef.get().strip() or "0.5")
             tgp = int(self.bulk_tg_prob.get().strip() or "100")
             hits = int(self.bulk_hits.get().strip() or "1")
-            
+
             status_a = self.bulk_status_a.get().strip() or None
             status_b = self.bulk_status_b.get().strip() or None
             status = [status_a, status_b]
@@ -710,7 +787,7 @@ class OptimizerView:
                 p1_data, p2_data, move_indices, av_sp, nb, nd,
                 ra, rb, curhp, w_def, w_spdef, tgp, hits, weather, field, crit_b, status
             )
-            
+
             self.optimization_choices = ["무보정 (SP = 0)", f"남은 스탯 전부 투자 (H분배 SP = {av_sp})"]
             self.raw_optimization_options = [
                 {"type": "SPs", "SPs": [0, self.latest_optimized_sp["A"], 0, self.latest_optimized_sp["C"], 0, self.latest_optimized_sp["S"]]},
@@ -722,7 +799,7 @@ class OptimizerView:
                     desc = f"[{res.get('category', '분배')}] 총SP={res.get('total_sp')} (H={res.get('hp_point')}, B={res.get('b_point')}, D={res.get('d_point')}) - 생존율: {res.get('survival_probability'):.1f}%"
                     self.optimization_choices.append(desc)
                     self.raw_optimization_options.append({"type": "bulk_res", "res": res})
-            
+
             if self.optimization_choices:
                 self.result_select_combo.configure(values=self.optimization_choices)
                 self.result_select_combo.set(self.optimization_choices[0])
@@ -735,7 +812,7 @@ class OptimizerView:
     def on_result_option_selected(self, choice_text):
         if not self.raw_optimization_options:
             return
-        
+
         for idx, text in enumerate(self.optimization_choices):
             if text == choice_text:
                 selected_data = self.raw_optimization_options[idx]
@@ -744,10 +821,10 @@ class OptimizerView:
                 if dtype == "zero":
                     sp_dict = {"H": 0, "A": 0, "B": 0, "C": 0, "D": 0, "S": 0}
                 elif dtype == "max":
-                    sp_dict = {"H": selected_data["SPs"][0], "A": selected_data["SPs"][1], "B": selected_data["SPs"][2], 
+                    sp_dict = {"H": selected_data["SPs"][0], "A": selected_data["SPs"][1], "B": selected_data["SPs"][2],
                                "C": selected_data["SPs"][3],"D": selected_data["SPs"][4], "S": selected_data["SPs"][5]}
                 elif dtype == "SPs":
-                    sp_dict = {"H": selected_data["SPs"][0], "A": selected_data["SPs"][1], "B": selected_data["SPs"][2], 
+                    sp_dict = {"H": selected_data["SPs"][0], "A": selected_data["SPs"][1], "B": selected_data["SPs"][2],
                                "C": selected_data["SPs"][3], "D": selected_data["SPs"][4], "S": selected_data["SPs"][5]}
                 elif dtype == "speed_row":
                     sp_dict = self.latest_optimized_sp.copy()
@@ -756,7 +833,7 @@ class OptimizerView:
                     sp_dict = self.latest_optimized_sp.copy()
                     stype = selected_data.get("stat_type", "A")
                     sp_val = selected_data.get("sp_val", selected_data.get("A_sp", 0))
-                    
+
                     if stype == "C":
                         sp_dict["C"] = sp_val
                     else:
@@ -806,7 +883,7 @@ class OptimizerView:
             s_sp = self.latest_optimized_sp["S"]
 
             p1_data = self._load_sample_csv_data(target_sample)
-            
+
             name = p1_data.get("포켓몬", "")
             note = p1_data.get("노트", "")
             item = p1_data.get("지닌도구", "")
@@ -818,7 +895,7 @@ class OptimizerView:
             weather = p1_data.get("날씨", "")
             status = p1_data.get("상태이상", "")
             field = p1_data.get("필드", "")
-            
+
             updated_SPs = [h_sp, a_sp, b_sp, c_sp, d_sp, s_sp]
 
             saved_path = SampleCSVbuilder.make_sample_csv(

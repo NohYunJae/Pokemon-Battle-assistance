@@ -407,35 +407,6 @@ class PokemonSelector:
 
         return offense_scores, recommended_attack_types
 
-    def recommend_pokemon(self, party_samples):
-        """기존 호환용: 방어 상성만 고려한 추천 함수"""
-        analyzer = TeamAnalyzer(party_samples)
-        defense_scores, common_weaknesses, common_not_resisted = self.recommend_pokemon_defense(analyzer)
-
-        general_recommendations = []
-        mega_recommendations = []
-
-        for name, data in defense_scores.items():
-            item = {
-                "name": name,
-                "types": data["types"],
-                "covered_types": data["covered_types"],
-                "safety_score": data["safety_score"],
-                "weakness_score": data["weakness_score"],
-                "not_resisted_score": data["not_resisted_score"],
-                "total_score": data["defense_score"]
-            }
-            if name.startswith("메가") and not name.startswith("메가니움"):
-                mega_recommendations.append(item)
-            else:
-                general_recommendations.append(item)
-
-        sort_key = lambda x: (x["total_score"], x["safety_score"], x["name"])
-        general_recommendations.sort(key=sort_key, reverse=True)
-        mega_recommendations.sort(key=sort_key, reverse=True)
-
-        return general_recommendations[:50], mega_recommendations, common_weaknesses, common_not_resisted
-
     def recommend_pokemon_combined(self, party_samples, top_n_offense=3):
         """종합 함수: 방어 상성 함수와 공격 상성 함수를 각각 호출하여 결과를 합산 및 정렬"""
         analyzer = TeamAnalyzer(party_samples)
@@ -492,7 +463,7 @@ class PokemonSelector:
         general_recommendations.sort(key=sort_key, reverse=True)
         mega_recommendations.sort(key=sort_key, reverse=True)
 
-        return general_recommendations[:50], mega_recommendations, common_weaknesses, common_not_resisted, recommended_attack_types
+        return general_recommendations[:100], mega_recommendations, common_weaknesses, common_not_resisted, recommended_attack_types
 
 
 def test_recommend_combined(test_samples):
@@ -500,7 +471,7 @@ def test_recommend_combined(test_samples):
     print("=== [방어 + 공격 상성 분리 및 종합 추천 테스트] ===")
     try:
         selector = PokemonSelector()
-        general_top50, mega_list, common_weaknesses, common_not_resisted, recommended_attack_types = selector.recommend_pokemon_combined(test_samples)
+        general_top100, mega_list, common_weaknesses, common_not_resisted, recommended_attack_types = selector.recommend_pokemon_combined(test_samples)
         
         # 1. 파티 방어 취약 타입 분석 현황 출력 추가
         print("\n[파티 방어 취약 타입 분석 현황]")
@@ -527,9 +498,9 @@ def test_recommend_combined(test_samples):
             print("  - 추천 공격 타입 없음")
 
         # 3. 일반 포켓몬 종합 추천 결과 출력
-        print(f"\n✨ [일반 포켓몬] 종합 추천 상위 {len(general_top50)}마리:\n")
-        if general_top50:
-            for idx, item in enumerate(general_top50, 1):
+        print(f"\n✨ [일반 포켓몬] 종합 추천 상위 {len(general_top100)}마리:\n")
+        if general_top100:
+            for idx, item in enumerate(general_top100, 1):
                 p_name = item["name"]
                 p_types = '/'.join(item["types"])
                 c_types = ', '.join(item["covered_types"]) if item["covered_types"] else "없음"
