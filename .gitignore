@@ -4,6 +4,7 @@ __pycache__/
 build/
 dist/
 pokeicn.icns
+pokeicn.ico
 PKMBTA.spec
 utils/__pycache__/
 calculator/__pycache__/
