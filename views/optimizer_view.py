@@ -2,6 +2,7 @@ import os
 import sys
 import customtkinter as ctk
 import threading
+import traceback
 
 from stat_optimizer import PokemonStatOptimizer
 from pokeCSVbuilder import SampleCSVbuilder
@@ -659,7 +660,8 @@ class OptimizerView:
                 self.on_result_option_selected(self.optimization_choices[0])
 
         except Exception as e:
-            print(f"[오류] 결정력 최적화 실패: {str(e)}")
+            print(f"[오류] 내구 최적화 실행 중 오류 발생: {str(e)}")
+            print(traceback.format_exc())
 
     def run_bulk_optimization(self):
         try:
@@ -728,6 +730,7 @@ class OptimizerView:
 
         except Exception as e:
             print(f"[오류] 내구 최적화 실행 중 오류 발생: {str(e)}")
+            print(traceback.format_exc())
 
     def on_result_option_selected(self, choice_text):
         if not self.raw_optimization_options:
@@ -814,6 +817,7 @@ class OptimizerView:
             moves = p1_data.get("기술", [])
             weather = p1_data.get("날씨", "")
             status = p1_data.get("상태이상", "")
+            field = p1_data.get("필드", "")
             
             updated_SPs = [h_sp, a_sp, b_sp, c_sp, d_sp, s_sp]
 
@@ -829,6 +833,7 @@ class OptimizerView:
                 IVs=ivs,
                 moves=moves,
                 weather=weather,
+                field= field,
                 status=status
             )
 

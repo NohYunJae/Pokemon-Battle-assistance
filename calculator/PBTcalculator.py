@@ -88,7 +88,7 @@ class BattleCalculator:
         is_spread=False,
         tera_type=None,
     ):
-        def apply_other_modifiers(dmg: int, mod_numerators: list[int]) -> int:
+        def apply_other_modifiers(dmg, mod_numerators: list[int]):
             if not mod_numerators:
                 return dmg
             other_acc = 4096
@@ -139,6 +139,9 @@ class BattleCalculator:
             type_mod *= eff
 
         if type_mod == 0.0:
+            if isinstance(def_hp, np.ndarray):
+                zero_arr = np.zeros((16, *def_hp.shape), dtype=np.int64)
+                return zero_arr, np.zeros_like(zero_arr, dtype=np.float64)
             return [0] * 16, [0.0] * 16
 
         orig_types = self.attacker.types
@@ -182,7 +185,11 @@ class BattleCalculator:
             elif self.attacker.ability == "변환자재":
                 dmg = (dmg * 6144) // 4096
 
-            dmg = int(dmg * type_mod)
+            dmg = dmg * type_mod
+            if isinstance(dmg, np.ndarray):
+                dmg = np.floor(dmg).astype(np.int64)
+            else:
+                dmg = int(dmg)
 
             if (
                 status_a == "화상"
@@ -204,13 +211,21 @@ class BattleCalculator:
 
             dmg = apply_other_modifiers(dmg, other_mods)
 
-            dmg = max(1, dmg)
+            if isinstance(dmg, np.ndarray):
+                dmg = np.maximum(1, dmg)
+                pct = np.round(dmg / def_hp * 100, 1)
+            else:
+                dmg = max(1, dmg)
+                pct = float(np.round(dmg / def_hp * 100, 1))
 
             damages.append(dmg)
-            percentages.append(np.round(dmg / def_hp * 100, 1))
+            percentages.append(pct)
+
+        if damages and isinstance(damages[0], np.ndarray):
+            return np.stack(damages, axis=0), np.stack(percentages, axis=0)
 
         return damages, percentages
-
+    
     def calculate_speed(self, rank_a, rank_b, item_a=None, item_b=None, weather=None):
         pkm_a = self.attacker
         pkm_b = self.defender
@@ -256,9 +271,11 @@ class DMGoutput_Bulk_Calculator:
 
     def _base_dmg_output(self, atk_stat, move, field=None, status=None, rank_a=0, is_crit=False):
         if move.category == "변화":
+            if isinstance(atk_stat, np.ndarray):
+                return np.zeros_like(atk_stat, dtype=np.float64), move.type
             return 0.0, move.type
 
-        def calculate_ranked_stat(base_stat: int, rank: int) -> int:
+        def calculate_ranked_stat(base_stat, rank: int):
             if not -6 <= rank <= 6:
                 raise ValueError("랭크는 -6에서 +6 사이여야 합니다.")
             if rank >= 0:
@@ -267,8 +284,8 @@ class DMGoutput_Bulk_Calculator:
                 return (base_stat * 2) // (2 + abs(rank))
 
         move_type = move.type
-        power = float(move.power)
-        
+        power = np.asarray(move.power, dtype=np.float64) if isinstance(move.power, np.ndarray) else float(move.power)
+
         eff_rank_a = max(0, rank_a) if is_crit else rank_a
         atk_stat = calculate_ranked_stat(atk_stat, eff_rank_a)
 
@@ -278,9 +295,13 @@ class DMGoutput_Bulk_Calculator:
         item_power_mod, final_atk_stat = powrmods.item_mods(atk_stat, move_type)
 
         power = power * f_ability_mod * ability_mod * item_power_mod
-        power = max(1.0, float(power))
-
-        fp_bs = float(final_atk_stat) * power
+        if isinstance(power, np.ndarray) or isinstance(final_atk_stat, np.ndarray):
+            power_arr = np.maximum(1.0, np.asarray(power, dtype=np.float64))
+            atk_arr = np.asarray(final_atk_stat, dtype=np.float64)
+            fp_bs = atk_arr * power_arr
+        else:
+            power_val = max(1.0, float(power))
+            fp_bs = float(final_atk_stat) * power_val
 
         return fp_bs, move_type
 
@@ -294,119 +315,123 @@ class DMGoutput_Bulk_Calculator:
         tera_type=None,
         is_sub_call=False,
     ):
-      # _sub 접미사를 분리하여 원본 기술명 추출
-      base_move_name = self.move.name.split("_sub")[0]
+        # _sub 접미사를 분리하여 원본 기술명 추출
+        base_move_name = self.move.name.split("_sub")[0]
 
-      multi_cat = None
-      for cat, moves in MULTI_STRIKE_MOVES.items():
-        if base_move_name in moves:
-          multi_cat = cat
-          break
+        multi_cat = None
+        for cat, moves in MULTI_STRIKE_MOVES.items():
+            if base_move_name in moves:
+                multi_cat = cat
+                break
 
-      hit_count = 1
-      if multi_cat and not is_sub_call:
-        is_loaded_dice = getattr(self.pkm, "item", None) == "속임수주사위"
-        if multi_cat == "multi_2_5":
-          hit_count = 4 if is_loaded_dice else 3
-        elif multi_cat == "multi_2":
-          hit_count = 2
-        elif multi_cat == "multi_3":
-          hit_count = 3
-        elif multi_cat == "multi_10":
-          hit_count = 10
+        hit_count = 1
+        if multi_cat and not is_sub_call:
+            is_loaded_dice = getattr(self.pkm, "item", None) == "속임수주사위"
+            if multi_cat == "multi_2_5":
+                hit_count = 4 if is_loaded_dice else 3
+            elif multi_cat == "multi_2":
+                hit_count = 2
+            elif multi_cat == "multi_3":
+                hit_count = 3
+            elif multi_cat == "multi_10":
+                hit_count = 10
 
-      if self.move.name == "바디프레스":
-        atk_stat = self.pkm.stats[2]
+        if self.move.name == "바디프레스":
+            atk_stat = self.pkm.stats[2]
 
-      is_always_crit = base_move_name in ALWAYS_CRIT_MOVES
+        is_always_crit = base_move_name in ALWAYS_CRIT_MOVES
 
-      if multi_cat and not is_sub_call and base_move_name in ["트리플킥", "트리플악셀"]:
-        hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[
-            base_move_name
-        ][:hit_count]
-        total_dmg_output = 0
-        for p in hit_powers:
-          temp_move = DummyObject(
-              name=f"{base_move_name}_sub",
-              power=p,
-              type=self.move.type,
-              category=self.move.category,
-              contact=getattr(self.move, "contact", False),
-          )
-          temp_calc = DMGoutput_Bulk_Calculator(self.pkm, temp_move)
-          total_dmg_output += temp_calc.calculate_dmg_output(
-              atk_stat, field, weather, status, rank_a, tera_type, is_sub_call=True
-          )
-        return int(np.floor(total_dmg_output))
+        if multi_cat and not is_sub_call and base_move_name in ["트리플킥", "트리플악셀"]:
+            hit_powers = {"트리플킥": [10, 20, 30], "트리플악셀": [20, 40, 60]}[
+                base_move_name
+            ][:hit_count]
+            total_dmg_output = 0
+            for p in hit_powers:
+                temp_move = DummyObject(
+                    name=f"{base_move_name}_sub",
+                    power=p,
+                    type=self.move.type,
+                    category=self.move.category,
+                    contact=getattr(self.move, "contact", False),
+                )
+                temp_calc = DMGoutput_Bulk_Calculator(self.pkm, temp_move)
+                total_dmg_output += temp_calc.calculate_dmg_output(
+                    atk_stat, field, weather, status, rank_a, tera_type, is_sub_call=True
+                )
+            if isinstance(total_dmg_output, np.ndarray):
+                return np.floor(total_dmg_output).astype(np.int64)
+            return int(np.floor(total_dmg_output))
 
-      base_fp, eff_move_type = self._base_dmg_output(
-          atk_stat, self.move, field, status, rank_a, is_crit=is_always_crit
-      )
-      dmg_output = float(base_fp)
+        base_fp, eff_move_type = self._base_dmg_output(
+            atk_stat, self.move, field, status, rank_a, is_crit=is_always_crit
+        )
+        dmg_output = np.asarray(base_fp, dtype=np.float64) if isinstance(base_fp, np.ndarray) else float(base_fp)
 
-      weather_multiplier = 1.0
-      if weather == "비":
-        if eff_move_type == "물":
-          weather_multiplier = 1.5
-        elif eff_move_type == "불꽃":
-          weather_multiplier = 0.5
-      elif weather == "쾌청":
-        if eff_move_type == "불꽃" or base_move_name in [
-            "하이드로스팀",
-        ]:
-          weather_multiplier = 1.5
-        elif eff_move_type == "물":
-          weather_multiplier = 0.5
+        weather_multiplier = 1.0
+        if weather == "비":
+            if eff_move_type == "물":
+                weather_multiplier = 1.5
+            elif eff_move_type == "불꽃":
+                weather_multiplier = 0.5
+        elif weather == "쾌청":
+            if eff_move_type == "불꽃" or base_move_name in [
+                "하이드로스팀",
+            ]:
+                weather_multiplier = 1.5
+            elif eff_move_type == "물":
+                weather_multiplier = 0.5
 
-      dmg_output *= weather_multiplier
+        dmg_output = dmg_output * weather_multiplier
 
-      if is_always_crit:
-        dmg_output *= 1.5
+        if is_always_crit:
+            dmg_output = dmg_output * 1.5
 
-      orig_types = self.pkm.types
-      is_adaptability = self.pkm.ability == "적응력"
-      stab_multiplier = 1.0
+        orig_types = self.pkm.types
+        is_adaptability = self.pkm.ability == "적응력"
+        stab_multiplier = 1.0
 
-      if tera_type:
-        in_orig = eff_move_type in orig_types
-        in_tera = eff_move_type == tera_type
-        if in_orig and in_tera:
-          stab_multiplier = 2.25 if is_adaptability else 2.0
-        elif in_tera:
-          stab_multiplier = 2.0 if is_adaptability else 1.5
-        elif in_orig:
-          stab_multiplier = 1.5
-      else:
-        if eff_move_type in orig_types:
-          stab_multiplier = 2.0 if is_adaptability else 1.5
+        if tera_type:
+            in_orig = eff_move_type in orig_types
+            in_tera = eff_move_type == tera_type
+            if in_orig and in_tera:
+                stab_multiplier = 2.25 if is_adaptability else 2.0
+            elif in_tera:
+                stab_multiplier = 2.0 if is_adaptability else 1.5
+            elif in_orig:
+                stab_multiplier = 1.5
+        else:
+            if eff_move_type in orig_types:
+                stab_multiplier = 2.0 if is_adaptability else 1.5
 
-      if (
-          self.pkm.ability == "적응력"
-          and eff_move_type in orig_types
-          and not tera_type
-      ):
-        dmg_output *= 2.0
-      elif stab_multiplier != 1.0:
-        dmg_output *= stab_multiplier
-      elif self.pkm.ability == "변환자재":
-        dmg_output *= 1.5
+        if (
+            self.pkm.ability == "적응력"
+            and eff_move_type in orig_types
+            and not tera_type
+        ):
+            dmg_output = dmg_output * 2.0
+        elif stab_multiplier != 1.0:
+            dmg_output = dmg_output * stab_multiplier
+        elif self.pkm.ability == "변환자재":
+            dmg_output = dmg_output * 1.5
 
-      if (
-          status == "화상"
-          and self.move.category == "물리"
-          and self.pkm.ability != "근성"
-          and not base_move_name.endswith("객기")
-      ):
-        dmg_output *= 0.5
+        if (
+            status == "화상"
+            and self.move.category == "물리"
+            and self.pkm.ability != "근성"
+            and not base_move_name.endswith("객기")
+        ):
+            dmg_output = dmg_output * 0.5
 
-      if self.pkm.item == "생명의구슬":
-        dmg_output *= 1.3
+        if self.pkm.item == "생명의구슬":
+            dmg_output = dmg_output * 1.3
 
-      # 일반 연속기(연속펀치 등 위력이 고정인 경우)에서만 hit_count 곱하기 적용 (base_move_name 기준)
-      if multi_cat and not is_sub_call and base_move_name not in ["트리플킥", "트리플악셀"]:
-        dmg_output *= hit_count
+        # 일반 연속기(연속펀치 등 위력이 고정인 경우)에서만 hit_count 곱하기 적용 (base_move_name 기준)
+        if multi_cat and not is_sub_call and base_move_name not in ["트리플킥", "트리플악셀"]:
+            dmg_output = dmg_output * hit_count
 
-      return int(np.floor(dmg_output))
+        if isinstance(dmg_output, np.ndarray):
+            return np.floor(dmg_output).astype(np.int64)
+        return int(np.floor(dmg_output))
 
     def calculate_bulk(self, H, B, D, weather, status, rank_b=0):
         def has_status(status):

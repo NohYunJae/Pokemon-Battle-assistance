@@ -569,7 +569,8 @@ if __name__ == "__main__":
         "HB자뭉한카",
         "HC누리레느",
         "고집생구마스카나",
-        "내구조정와자몽"
+        "내구조정와자몽",
+        "트릭룸브리무음"
     ]
     # test_recommend(test_samples)
     test_recommend_combined(test_samples)
