@@ -1,5 +1,4 @@
 import os
-import traceback
 
 from utils.pochamps_list import pochamps_pokemon_list
 from loader.data_loader import PokemonCSVLoader, Move, load_pokedex_cache
