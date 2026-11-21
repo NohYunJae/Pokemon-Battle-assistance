@@ -10,6 +10,8 @@ from calculator.utils.nature_chart import nature_chart
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "PokemonDATA", "data")
 FONT_FAMILY = "Malgun Gothic"
+STAT_NAMES = ["atk", "def", "spatk", "spdef", "spe"]
+
 
 class AutocompleteCombobox(ctk.CTkFrame):
     def __init__(self, master, values=None, command=None, **kwargs):
@@ -18,16 +20,21 @@ class AutocompleteCombobox(ctk.CTkFrame):
         self.command = command
 
         self.var = ctk.StringVar()
-        self.entry = ctk.CTkEntry(self, textvariable=self.var, height=22, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        self.entry = ctk.CTkEntry(
+            self,
+            textvariable=self.var,
+            height=22,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         self.entry.pack(side="left", fill="none", expand=False)
-        
+
         self.entry.bind("<KeyRelease>", self._on_key_release)
         self.entry.bind("<Return>", self._on_return)
         self.entry.bind("<Tab>", self._on_tab)
         self.entry.bind("<Down>", self._on_arrow_down)
         self.entry.bind("<Up>", self._on_arrow_up)
         self.entry.bind("<FocusOut>", self._on_focus_out)
-        
+
         if self.command:
             self.var.trace_add("write", lambda *args: self.command(self.var.get()))
 
@@ -74,17 +81,17 @@ class AutocompleteCombobox(ctk.CTkFrame):
             self.listbox_window.attributes("-topmost", True)
 
             self.listbox = tk.Listbox(
-                self.listbox_window, 
-                height=5, 
+                self.listbox_window,
+                height=5,
                 font=(FONT_FAMILY, 9),
                 bg="#0C1C2C",
                 fg="#FFFFFF",
                 selectbackground="#C74002",
                 selectforeground="#FFFFFF",
-                relief="flat", 
+                relief="flat",
                 bd=0,
                 highlightthickness=1,
-                highlightcolor="#BAE6FD"
+                highlightcolor="#BAE6FD",
             )
             self.listbox.pack(fill="both", expand=True)
             self.listbox.bind("<<ListboxSelect>>", self._on_select)
@@ -117,7 +124,9 @@ class AutocompleteCombobox(ctk.CTkFrame):
     def _on_arrow_up(self, event):
         if self.listbox and self.listbox.winfo_exists() and self.listbox.size() > 0:
             current = self.listbox.curselection()
-            prev_index = self.listbox.size() - 1 if not current else (current[0] - 1) % self.listbox.size()
+            prev_index = (
+                self.listbox.size() - 1 if not current else (current[0] - 1) % self.listbox.size()
+            )
             self.listbox.selection_clear(0, tk.END)
             self.listbox.selection_set(prev_index)
             self.listbox.see(prev_index)
@@ -134,7 +143,12 @@ class AutocompleteCombobox(ctk.CTkFrame):
                 self.command(selected)
 
     def _on_return(self, event):
-        if self.listbox_window and self.listbox_window.winfo_exists() and self.listbox_window.state() == "normal" and self.listbox.size() > 0:
+        if (
+            self.listbox_window
+            and self.listbox_window.winfo_exists()
+            and self.listbox_window.state() == "normal"
+            and self.listbox.size() > 0
+        ):
             if not self.listbox.curselection():
                 self.listbox.selection_set(0)
             self._on_select(None)
@@ -153,7 +167,9 @@ class AutocompleteCombobox(ctk.CTkFrame):
     def _check_and_hide(self):
         try:
             focus_widget = self.focus_get()
-            if focus_widget != self.entry and (not self.listbox_window or not str(focus_widget).startswith(str(self.listbox_window))):
+            if focus_widget != self.entry and (
+                not self.listbox_window or not str(focus_widget).startswith(str(self.listbox_window))
+            ):
                 self._close_listbox()
         except Exception:
             self._close_listbox()
@@ -180,77 +196,178 @@ class SpdCalculatorView(ctk.CTkFrame):
         self.pack(fill="both", expand=True)
 
         self.nature_list = list(nature_chart.keys())
+        self.nature_display_to_key = {}
+        self.nature_key_to_display = {}
+        for nature_name in self.nature_list:
+            display_str = self._build_nature_display(nature_name)
+            self.nature_display_to_key[display_str] = nature_name
+            self.nature_key_to_display[nature_name] = display_str
+        self.nature_display_list = [self.nature_key_to_display[n] for n in self.nature_list]
+
         self._is_initialized = False
 
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.left_frame = ctk.CTkFrame(self, fg_color="#F0F9FF", corner_radius=8, border_width=1.5, border_color="#000000")
+        self.left_frame = ctk.CTkFrame(
+            self,
+            fg_color="#F0F9FF",
+            corner_radius=8,
+            border_width=1.5,
+            border_color="#000000",
+        )
         self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(5, 3), pady=5)
 
-        self.right_frame = ctk.CTkFrame(self, fg_color="#F0F9FF", corner_radius=8, border_width=1.5, border_color="#000000")
+        self.right_frame = ctk.CTkFrame(
+            self,
+            fg_color="#F0F9FF",
+            corner_radius=8,
+            border_width=1.5,
+            border_color="#000000",
+        )
         self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(3, 5), pady=5)
 
-        title_label = ctk.CTkLabel(self.left_frame, text="스피드 비교 계산기", font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"))
+        title_label = ctk.CTkLabel(
+            self.left_frame,
+            text="스피드 비교 계산기",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+        )
         title_label.pack(anchor="w", padx=12, pady=(8, 4))
 
         input_container = ctk.CTkFrame(self.left_frame, fg_color="transparent")
         input_container.pack(fill="both", expand=False, padx=12, pady=2)
 
         # 포켓몬 A 설정
-        pkm1_label = ctk.CTkLabel(input_container, text="[포켓몬 A 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
+        pkm1_label = ctk.CTkLabel(
+            input_container,
+            text="[포켓몬 A 설정]",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
+        )
         pkm1_label.pack(anchor="w", pady=(1, 1))
-        
-        self.pkm1_name_combo = self._create_autocomplete_row(input_container, "포켓몬:", [], command=lambda x: self.run_calculation())
-        self.pkm1_nature_combo = self._create_combo_row(input_container, "성격:", self.nature_list, command=lambda x: self.run_calculation())
-        self.pkm1_nature_combo.set("겁쟁이" if "겁쟁이" in self.nature_list else self.nature_list[0])
-        
-        self.pkm1_item_entry = self._create_input_row(input_container, "지닌물건:", "", command=lambda e: self.run_calculation())
-        self.pkm1_ability_entry = self._create_input_row(input_container, "특성:", "", command=lambda e: self.run_calculation())
-        
+
+        self.pkm1_name_combo = self._create_autocomplete_row(
+            input_container, "포켓몬:", [], command=lambda x: self.run_calculation()
+        )
+        self.pkm1_nature_combo = self._create_combo_row(
+            input_container,
+            "성격:",
+            self.nature_display_list,
+            command=lambda x: self.run_calculation(),
+        )
+        default_pkm1_nature = "겁쟁이" if "겁쟁이" in self.nature_key_to_display else self.nature_list[0]
+        self.pkm1_nature_combo.set(self.nature_key_to_display[default_pkm1_nature])
+
+        self.pkm1_item_entry = self._create_input_row(
+            input_container, "지닌물건:", "", command=lambda e: self.run_calculation()
+        )
+        self.pkm1_ability_entry = self._create_input_row(
+            input_container, "특성:", "", command=lambda e: self.run_calculation()
+        )
+
         self.pkm1_spd_entry, self.pkm1_rank_entry = self._create_sp_with_rank_row(
-            input_container, ctk.StringVar(value="스피드 [SP]:"), "32", "0", command=lambda e: self.run_calculation()
+            input_container,
+            ctk.StringVar(value="스피드 [SP]:"),
+            "32",
+            "0",
+            command=lambda e: self.run_calculation(),
         )
 
         # 포켓몬 B 설정
-        pkm2_label = ctk.CTkLabel(input_container, text="[포켓몬 B 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
+        pkm2_label = ctk.CTkLabel(
+            input_container,
+            text="[포켓몬 B 설정]",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
+        )
         pkm2_label.pack(anchor="w", pady=(6, 1))
 
-        self.pkm2_name_combo = self._create_autocomplete_row(input_container, "포켓몬:", [], command=lambda x: self.run_calculation())
-        self.pkm2_nature_combo = self._create_combo_row(input_container, "성격:", self.nature_list, command=lambda x: self.run_calculation())
-        self.pkm2_nature_combo.set("고집" if "고집" in self.nature_list else self.nature_list[0])
+        self.pkm2_name_combo = self._create_autocomplete_row(
+            input_container, "포켓몬:", [], command=lambda x: self.run_calculation()
+        )
+        self.pkm2_nature_combo = self._create_combo_row(
+            input_container,
+            "성격:",
+            self.nature_display_list,
+            command=lambda x: self.run_calculation(),
+        )
+        default_pkm2_nature = "고집" if "고집" in self.nature_key_to_display else self.nature_list[0]
+        self.pkm2_nature_combo.set(self.nature_key_to_display[default_pkm2_nature])
 
-        self.pkm2_item_entry = self._create_input_row(input_container, "지닌물건:", "", command=lambda e: self.run_calculation())
-        self.pkm2_ability_entry = self._create_input_row(input_container, "특성:", "", command=lambda e: self.run_calculation())
-        
+        self.pkm2_item_entry = self._create_input_row(
+            input_container, "지닌물건:", "", command=lambda e: self.run_calculation()
+        )
+        self.pkm2_ability_entry = self._create_input_row(
+            input_container, "특성:", "", command=lambda e: self.run_calculation()
+        )
+
         self.pkm2_spd_entry, self.pkm2_rank_entry = self._create_sp_with_rank_row(
-            input_container, ctk.StringVar(value="스피드 [SP]:"), "32", "0", command=lambda e: self.run_calculation()
+            input_container,
+            ctk.StringVar(value="스피드 [SP]:"),
+            "32",
+            "0",
+            command=lambda e: self.run_calculation(),
         )
 
         # 환경 설정
-        env_label = ctk.CTkLabel(input_container, text="[환경 설정]", font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12))
+        env_label = ctk.CTkLabel(
+            input_container,
+            text="[환경 설정]",
+            font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
+        )
         env_label.pack(anchor="w", pady=(6, 1))
 
         self.weather_combo = self._create_combo_row(
-            input_container, "날씨:", ["", "비", "모래바람", "쾌청", "눈"], 
-            command=lambda x: self.run_calculation()
+            input_container,
+            "날씨:",
+            ["", "비", "모래바람", "쾌청", "눈"],
+            command=lambda x: self.run_calculation(),
         )
         self.weather_combo.set("")
 
         # 우측 결과 창
-        res_title_label = ctk.CTkLabel(self.right_frame, text="📊 스피드 비교 결과", font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"))
+        res_title_label = ctk.CTkLabel(
+            self.right_frame,
+            text="📊 스피드 비교 결과",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
+        )
         res_title_label.pack(anchor="w", padx=15, pady=(15, 10))
 
-        self.result_textbox = ctk.CTkTextbox(self.right_frame, fg_color="#FFFFFF", text_color="#1E293B", corner_radius=8, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
+        self.result_textbox = ctk.CTkTextbox(
+            self.right_frame,
+            fg_color="#FFFFFF",
+            text_color="#1E293B",
+            corner_radius=8,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13),
+        )
         self.result_textbox.pack(fill="both", expand=True, padx=15, pady=(0, 15))
-        
+
         self.result_textbox.configure(state="normal")
         self.result_textbox.delete("0.1", "end")
         self.result_textbox.insert("0.1", "⏳ [시스템] 캐시 초기화 중입니다... 잠시만 기다려주세요.")
         self.result_textbox.configure(state="disabled")
 
-        self.after(100, lambda: threading.Thread(target=self._load_cache_background, daemon=True).start())
+        self.after(
+            100, lambda: threading.Thread(target=self._load_cache_background, daemon=True).start()
+        )
+
+    def _build_nature_display(self, nature_name: str) -> str:
+        multipliers = nature_chart.get(nature_name)
+        if not multipliers or len(multipliers) != 5:
+            return nature_name
+
+        up_stats = [f"{STAT_NAMES[i]}↑" for i, val in enumerate(multipliers) if val > 1.0]
+        down_stats = [f"{STAT_NAMES[i]}↓" for i, val in enumerate(multipliers) if val < 1.0]
+
+        if not up_stats and not down_stats:
+            return f"{nature_name} (변동없음)"
+
+        return f"{nature_name} ({' '.join(up_stats + down_stats)})"
+
+    def _parse_nature_name(self, raw_value: str) -> str:
+        val = raw_value.strip()
+        if val in self.nature_display_to_key:
+            return self.nature_display_to_key[val]
+        return val.split(" (")[0].strip()
 
     def _load_cache_background(self):
         try:
@@ -282,9 +399,17 @@ class SpdCalculatorView(ctk.CTkFrame):
     def _create_input_row(self, parent, label_text, default_value="", command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        lbl = ctk.CTkLabel(
+            frame,
+            text=label_text,
+            width=80,
+            anchor="w",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         lbl.pack(side="left")
-        entry = ctk.CTkEntry(frame, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        entry = ctk.CTkEntry(
+            frame, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11)
+        )
         entry.pack(side="left")
         entry.insert(0, default_value)
         entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -292,11 +417,19 @@ class SpdCalculatorView(ctk.CTkFrame):
             entry.bind("<KeyRelease>", command)
         return entry
 
-    def _create_sp_with_rank_row(self, parent, label_var, default_sp="32", default_rank="0", command=None):
+    def _create_sp_with_rank_row(
+        self, parent, label_var, default_sp="32", default_rank="0", command=None
+    ):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.pack(fill="x", pady=1)
-        
-        lbl = ctk.CTkLabel(frame, textvariable=label_var, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"))
+
+        lbl = ctk.CTkLabel(
+            frame,
+            textvariable=label_var,
+            width=80,
+            anchor="w",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+        )
         lbl.pack(side="left")
 
         right_sub_frame = ctk.CTkFrame(frame, fg_color="transparent")
@@ -316,7 +449,13 @@ class SpdCalculatorView(ctk.CTkFrame):
                 if command:
                     command(None)
 
-        sp_entry = ctk.CTkEntry(right_sub_frame, width=45, height=19, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
+        sp_entry = ctk.CTkEntry(
+            right_sub_frame,
+            width=45,
+            height=19,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            justify="center",
+        )
         sp_entry.pack(side="left", padx=(0, 2))
         sp_entry.insert(0, default_sp)
         sp_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -325,20 +464,47 @@ class SpdCalculatorView(ctk.CTkFrame):
 
         sp_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
         sp_btn_frame.pack(side="left", padx=(0, 6))
-        
-        up_btn_s = ctk.CTkButton(sp_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
-                                 fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
-                                 command=lambda: adjust_value(sp_entry, 1, 0, 32))
+
+        up_btn_s = ctk.CTkButton(
+            sp_btn_frame,
+            text="▲",
+            width=14,
+            height=9,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+            fg_color="#E2E8F0",
+            text_color="#334155",
+            hover_color="#CBD5E1",
+            command=lambda: adjust_value(sp_entry, 1, 0, 32),
+        )
         up_btn_s.pack(side="top", fill="x")
-        down_btn_s = ctk.CTkButton(sp_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
-                                   fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
-                                   command=lambda: adjust_value(sp_entry, -1, 0, 32))
+        down_btn_s = ctk.CTkButton(
+            sp_btn_frame,
+            text="▼",
+            width=14,
+            height=9,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+            fg_color="#E2E8F0",
+            text_color="#334155",
+            hover_color="#CBD5E1",
+            command=lambda: adjust_value(sp_entry, -1, 0, 32),
+        )
         down_btn_s.pack(side="bottom", fill="x")
 
-        rank_lbl = ctk.CTkLabel(right_sub_frame, text="랭크:", font=ctk.CTkFont(family=FONT_FAMILY, size=10), anchor="e")
+        rank_lbl = ctk.CTkLabel(
+            right_sub_frame,
+            text="랭크:",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=10),
+            anchor="e",
+        )
         rank_lbl.pack(side="left", padx=(0, 2))
 
-        rank_entry = ctk.CTkEntry(right_sub_frame, width=35, height=19, font=ctk.CTkFont(family=FONT_FAMILY, size=11), justify="center")
+        rank_entry = ctk.CTkEntry(
+            right_sub_frame,
+            width=35,
+            height=19,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            justify="center",
+        )
         rank_entry.pack(side="left", padx=(0, 2))
         rank_entry.insert(0, default_rank)
         rank_entry.bind("<Return>", lambda e: e.widget.tk_focusNext().focus())
@@ -348,13 +514,29 @@ class SpdCalculatorView(ctk.CTkFrame):
         rank_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
         rank_btn_frame.pack(side="left")
 
-        up_btn_r = ctk.CTkButton(rank_btn_frame, text="▲", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
-                                 fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
-                                 command=lambda: adjust_value(rank_entry, 1, -6, 6))
+        up_btn_r = ctk.CTkButton(
+            rank_btn_frame,
+            text="▲",
+            width=14,
+            height=9,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+            fg_color="#E2E8F0",
+            text_color="#334155",
+            hover_color="#CBD5E1",
+            command=lambda: adjust_value(rank_entry, 1, -6, 6),
+        )
         up_btn_r.pack(side="top", fill="x")
-        down_btn_r = ctk.CTkButton(rank_btn_frame, text="▼", width=14, height=9, font=ctk.CTkFont(family=FONT_FAMILY, size=7),
-                                   fg_color="#E2E8F0", text_color="#334155", hover_color="#CBD5E1",
-                                   command=lambda: adjust_value(rank_entry, -1, -6, 6))
+        down_btn_r = ctk.CTkButton(
+            rank_btn_frame,
+            text="▼",
+            width=14,
+            height=9,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=7),
+            fg_color="#E2E8F0",
+            text_color="#334155",
+            hover_color="#CBD5E1",
+            command=lambda: adjust_value(rank_entry, -1, -6, 6),
+        )
         down_btn_r.pack(side="bottom", fill="x")
 
         return sp_entry, rank_entry
@@ -362,9 +544,22 @@ class SpdCalculatorView(ctk.CTkFrame):
     def _create_combo_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        lbl = ctk.CTkLabel(
+            frame,
+            text=label_text,
+            width=80,
+            anchor="w",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         lbl.pack(side="left")
-        combo = ctk.CTkComboBox(frame, values=values, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11), command=command)
+        combo = ctk.CTkComboBox(
+            frame,
+            values=values,
+            width=120,
+            height=20,
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            command=command,
+        )
         combo.pack(side="left")
         if values:
             combo.set(values[0])
@@ -374,7 +569,13 @@ class SpdCalculatorView(ctk.CTkFrame):
     def _create_autocomplete_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.pack(fill="x", pady=1)
-        lbl = ctk.CTkLabel(frame, text=label_text, width=80, anchor="w", font=ctk.CTkFont(family=FONT_FAMILY, size=11))
+        lbl = ctk.CTkLabel(
+            frame,
+            text=label_text,
+            width=80,
+            anchor="w",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+        )
         lbl.pack(side="left")
 
         ac_box = AutocompleteCombobox(frame, values=values, command=command)
@@ -390,13 +591,13 @@ class SpdCalculatorView(ctk.CTkFrame):
 
         try:
             pkm1_name = self.pkm1_name_combo.get().strip()
-            pkm1_nature = self.pkm1_nature_combo.get().strip()
+            pkm1_nature = self._parse_nature_name(self.pkm1_nature_combo.get())
             pkm1_item = self.pkm1_item_entry.get().strip()
             pkm1_ability = self.pkm1_ability_entry.get().strip()
-            
+
             pkm1_sp_str = self.pkm1_spd_entry.get().strip()
             pkm1_sp_val = min(max(int(pkm1_sp_str) if pkm1_sp_str.isdigit() else 0, 0), 32)
-            
+
             pkm1_rank_str = self.pkm1_rank_entry.get().strip()
             try:
                 rank_a = int(pkm1_rank_str) if pkm1_rank_str else 0
@@ -405,13 +606,13 @@ class SpdCalculatorView(ctk.CTkFrame):
             rank_a = min(max(rank_a, -6), 6)
 
             pkm2_name = self.pkm2_name_combo.get().strip()
-            pkm2_nature = self.pkm2_nature_combo.get().strip()
+            pkm2_nature = self._parse_nature_name(self.pkm2_nature_combo.get())
             pkm2_item = self.pkm2_item_entry.get().strip()
             pkm2_ability = self.pkm2_ability_entry.get().strip()
-            
+
             pkm2_sp_str = self.pkm2_spd_entry.get().strip()
             pkm2_sp_val = min(max(int(pkm2_sp_str) if pkm2_sp_str.isdigit() else 0, 0), 32)
-            
+
             pkm2_rank_str = self.pkm2_rank_entry.get().strip()
             try:
                 rank_b = int(pkm2_rank_str) if pkm2_rank_str else 0
@@ -424,40 +625,70 @@ class SpdCalculatorView(ctk.CTkFrame):
                 weather = None
 
             # 스탯 계산 (인덱스 5가 스피드)
-            pkm1_stats, _ = get_pokemon_stats(pkm1_name, pkm1_nature, [0, 0, 0, 0, 0, pkm1_sp_val])
-            pkm2_stats, _ = get_pokemon_stats(pkm2_name, pkm2_nature, [0, 0, 0, 0, 0, pkm2_sp_val])
+            pkm1_stats, _ = get_pokemon_stats(
+                pkm1_name, pkm1_nature, [0, 0, 0, 0, 0, pkm1_sp_val]
+            )
+            pkm2_stats, _ = get_pokemon_stats(
+                pkm2_name, pkm2_nature, [0, 0, 0, 0, 0, pkm2_sp_val]
+            )
 
             base_speed_a = pkm1_stats[5]
             base_speed_b = pkm2_stats[5]
 
             # BattleCalculator의 calculate_speed 메서드 연동을 위한 더미 객체 생성
-            attacker = DummyObject(name=pkm1_name, item=pkm1_item, ability=pkm1_ability, stats=pkm1_stats, types=self._get_types_from_cache(pkm1_name))
-            defender = DummyObject(name=pkm2_name, item=pkm2_item, ability=pkm2_ability, stats=pkm2_stats, types=self._get_types_from_cache(pkm2_name))
+            attacker = DummyObject(
+                name=pkm1_name,
+                item=pkm1_item,
+                ability=pkm1_ability,
+                stats=pkm1_stats,
+                types=self._get_types_from_cache(pkm1_name),
+            )
+            defender = DummyObject(
+                name=pkm2_name,
+                item=pkm2_item,
+                ability=pkm2_ability,
+                stats=pkm2_stats,
+                types=self._get_types_from_cache(pkm2_name),
+            )
 
             calc = BattleCalculator(attacker, defender, None)
-            final_speed_a, final_speed_b = calc.calculate_speed(rank_a, rank_b, item_a=pkm1_item, item_b=pkm2_item, weather=weather)
+            final_speed_a, final_speed_b = calc.calculate_speed(
+                rank_a, rank_b, item_a=pkm1_item, item_b=pkm2_item, weather=weather
+            )
 
             rank_a_display = f"{rank_a:+d}" if rank_a != 0 else "0"
             rank_b_display = f"{rank_b:+d}" if rank_b != 0 else "0"
 
             result_text = f"===== [실시간 스피드 비교 분석] =====\n"
             result_text += f"날씨 환경: {weather if weather else '없음'}\n\n"
-            
+
             result_text += f"🔹 포켓몬 A: {pkm1_name if pkm1_name else '(미입력)'}\n"
             result_text += f" • 기본 실수치: {base_speed_a} (랭크: {rank_a_display})\n"
             result_text += f" • 최종 실수치: {final_speed_a}\n"
-            result_text += f" • 특성/아이템: 특성 [{pkm1_ability or '없음'}], 지닌물건 [{pkm1_item or '없음'}]\n\n"
+            result_text += (
+                f" • 특성/아이템: 특성 [{pkm1_ability or '없음'}], "
+                f"지닌물건 [{pkm1_item or '없음'}]\n\n"
+            )
 
             result_text += f"🔹 포켓몬 B: {pkm2_name if pkm2_name else '(미입력)'}\n"
             result_text += f" • 기본 실수치: {base_speed_b} (랭크: {rank_b_display})\n"
             result_text += f" • 최종 실수치: {final_speed_b}\n"
-            result_text += f" • 특성/아이템: 특성 [{pkm2_ability or '없음'}], 지닌물건 [{pkm2_item or '없음'}]\n\n"
+            result_text += (
+                f" • 특성/아이템: 특성 [{pkm2_ability or '없음'}], "
+                f"지닌물건 [{pkm2_item or '없음'}]\n\n"
+            )
 
             result_text += f"🏆 선공권 판정:\n"
             if final_speed_a > final_speed_b:
-                result_text += f" ⚡ {pkm1_name or '포켓몬 A'}가 더 빠릅니다! (속도 차이: +{final_speed_a - final_speed_b})\n"
+                result_text += (
+                    f" ⚡ {pkm1_name or '포켓몬 A'}가 더 빠릅니다! "
+                    f"(속도 차이: +{final_speed_a - final_speed_b})\n"
+                )
             elif final_speed_b > final_speed_a:
-                result_text += f" ⚡ {pkm2_name or '포켓몬 B'}가 더 빠릅니다! (속도 차이: +{final_speed_b - final_speed_a})\n"
+                result_text += (
+                    f" ⚡ {pkm2_name or '포켓몬 B'}가 더 빠릅니다! "
+                    f"(속도 차이: +{final_speed_b - final_speed_a})\n"
+                )
             else:
                 result_text += f" 🤝 두 포켓몬의 스피드 실수치가 같습니다! (동속 난수)\n"
 
@@ -467,7 +698,10 @@ class SpdCalculatorView(ctk.CTkFrame):
             self.result_textbox.configure(state="disabled")
 
         except Exception as e:
-            err_msg = f"⏳ [입력 대기 중] 올바른 포켓몬 이름과 수치를 입력해주세요.\n(세부 오류: {str(e)})"
+            err_msg = (
+                f"⏳ [입력 대기 중] 올바른 포켓몬 이름과 수치를 입력해주세요.\n"
+                f"(세부 오류: {str(e)})"
+            )
             self.result_textbox.configure(state="normal")
             self.result_textbox.delete("0.1", "end")
             self.result_textbox.insert("0.1", err_msg)
