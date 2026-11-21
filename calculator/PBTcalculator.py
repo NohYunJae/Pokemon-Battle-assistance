@@ -284,22 +284,43 @@ class BattleCalculator:
 
         return damages, percentages
 
-    def calculate_speed(self, rank_a, rank_b, item_a=None, item_b=None, weather=None):
-        def apply_speed_modifiers(base_stat: int, ability: str, item: str, current_weather) -> int:
-            speed = base_stat
-            if ability == "곡예" or (ability == "쓱쓱" and current_weather == "비") or (
-                ability == "모래헤치기" and current_weather == "모래바람"
+    def calculate_speed(self, rank_a, rank_b, item_a=None, item_b=None, weather=None, field=None):
+        def calc_single_speed(pokemon, rank: int, item_override) -> int:
+            ranked_speed = calculate_ranked_stat(pokemon.stats[5], rank)
+            eff_item = item_override if item_override is not None else getattr(pokemon, "item", None)
+
+            speed_probe = list(pokemon.stats)
+            speed_probe[5] = ranked_speed
+            orig_item = getattr(pokemon, "item", None)
+            if item_override is not None:
+                pokemon.item = item_override
+            try:
+                _, boosted_idx, paradox_mult = self._apply_paradox_boost(
+                    pokemon, speed_probe, weather, field
+                )
+            finally:
+                if item_override is not None:
+                    pokemon.item = orig_item
+
+            speed_mods = []
+            if boosted_idx == 5 and paradox_mult:
+                speed_mods.append(paradox_mult)
+
+            ability = getattr(pokemon, "ability", None)
+            if (
+                ability == "곡예"
+                or (ability == "쓱쓱" and weather == "비")
+                or (ability == "모래헤치기" and weather == "모래바람")
             ):
-                speed *= 2
-            if item == "구애스카프":
-                speed = (speed * 6144) // 4096
-            return speed
+                speed_mods.append(8192)
 
-        speed_a = calculate_ranked_stat(self.attacker.stats[5], rank_a)
-        speed_b = calculate_ranked_stat(self.defender.stats[5], rank_b)
+            if eff_item == "구애스카프":
+                speed_mods.append(6144)
 
-        speed_a = apply_speed_modifiers(speed_a, self.attacker.ability, item_a, weather)
-        speed_b = apply_speed_modifiers(speed_b, self.defender.ability, item_b, weather)
+            return apply_stat_4096_mods(ranked_speed, speed_mods)
+
+        speed_a = calc_single_speed(self.attacker, rank_a, item_a)
+        speed_b = calc_single_speed(self.defender, rank_b, item_b)
 
         return speed_a, speed_b
 
