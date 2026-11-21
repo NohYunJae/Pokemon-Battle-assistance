@@ -415,7 +415,7 @@ class SampleView:
                 dmg_val = pkm.calculate_DMG_output(DummyMove(move_info), field, weather, status)
                 damages.append(dmg_val)
 
-            bulk = pkm.calculate_bulk(DummyMove(move_info), weather, status)
+            bulk = pkm.calculate_bulk(DummyMove(move_info), weather, field, status)
             if item == "구애스카프":
                 spd = pkm.stats[5] * 3 // 2
             elif pkm.ability == "곡예":
