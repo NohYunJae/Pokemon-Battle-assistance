@@ -39,10 +39,10 @@ class Pokemon:
         dmg_output = DMGoutput_Bulk_Calculator(self.pkm, move).calculate_dmg_output(A, field, weather, status)
         return dmg_output
     
-    def calculate_bulk(self, move: Move, weather, status):
+    def calculate_bulk(self, move: Move, weather, field, status):
         hp = self.get_stat("HP")
         b = self.get_stat("B")
         d = self.get_stat("D")
         
-        physical_bulk, special_bulk = DMGoutput_Bulk_Calculator(self.pkm, move).calculate_bulk(hp, b, d, weather, status)
+        physical_bulk, special_bulk = DMGoutput_Bulk_Calculator(self.pkm, move).calculate_bulk(hp, b, d, weather, field, status)
         return physical_bulk, special_bulk

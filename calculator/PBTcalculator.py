@@ -73,7 +73,25 @@ class BattleCalculator:
             base = 0
 
         return base, move_type
+    
+    def _apply_paradox_boost(self, pokemon, stats, weather, field):
+        if len(stats) < 6:
+            return stats
 
+        is_proto = pokemon.ability == "고대활성" and (
+            weather == "쾌청" or pokemon.item == "부스트에너지"
+        )
+        is_quark = pokemon.ability == "쿼크차지" and (
+            field == "일렉트릭필드" or pokemon.item == "부스트에너지"
+        )
+
+        if is_proto or is_quark:
+            idx = max(range(1, 6), key=lambda i: stats[i])
+            mult = 1.5 if idx == 5 else 1.3
+            stats[idx] = int(np.floor(stats[idx] * mult))
+
+        return stats
+    
     def calculate_damage(
         self,
         atk_stat,
@@ -95,11 +113,8 @@ class BattleCalculator:
             for num in mod_numerators:
                 other_acc = poke_round_half_up(other_acc, num)
             return poke_round_half_down(dmg, other_acc)
-
+        
         status_a, status_b = status if isinstance(status, (tuple, list)) else (status, None)
-
-        if self.move.name == "바디프레스":
-            atk_stat = self.attacker.stats[2]
 
         if weather == "눈" and "얼음" in self.defender.types and self.move.category == "물리":
             def_stat = (def_stat * 3) // 2
@@ -108,6 +123,29 @@ class BattleCalculator:
 
         crit_mgr = CriticalHitManager(self.attacker, self.defender, self.move)
         is_crit = crit_mgr.evaluate_critical(user_critical=critical, status_b=status_b)
+        
+        atk_stats = self.attacker.stats
+        def_stats = self.defender.stats
+        if self.move.category == "물리":
+            atk_stats[1] = atk_stat
+            def_stats[2] = def_stat
+        elif self.move.category == "특수":
+            atk_stats[3] = atk_stat
+            def_stats[4] = def_stat
+
+        atk_stats = self._apply_paradox_boost(self.attacker, atk_stats, weather, field)
+
+        def_stats = self._apply_paradox_boost(self.defender, def_stats, weather, field)
+
+        if self.move.category == "물리":
+            atk_stat = atk_stats[1]
+            def_stat = def_stats[2]
+        elif self.move.category == "특수":
+            atk_stat = atk_stats[3]
+            def_stat = def_stats[4]
+
+        if self.move.name == "바디프레스":
+            atk_stat = atk_stats[2]
 
         base_damage, eff_move_type = self._base_damage(
             atk_stat, def_stat, rank_a, rank_b, field, status_a, status_b, critical=is_crit
@@ -304,7 +342,25 @@ class DMGoutput_Bulk_Calculator:
             fp_bs = float(final_atk_stat) * power_val
 
         return fp_bs, move_type
+    
+    def _apply_paradox_boost(self, pokemon, stats, weather, field):
+        if len(stats) < 6:
+            return stats
 
+        is_proto = pokemon.ability == "고대활성" and (
+            weather == "쾌청" or pokemon.item == "부스트에너지"
+        )
+        is_quark = pokemon.ability == "쿼크차지" and (
+            field == "일렉트릭필드" or pokemon.item == "부스트에너지"
+        )
+
+        if is_proto or is_quark:
+            idx = max(range(1, 6), key=lambda i: stats[i])
+            mult = 1.5 if idx == 5 else 1.3
+            stats[idx] = int(np.floor(stats[idx] * mult))
+
+        return stats
+    
     def calculate_dmg_output(
         self,
         atk_stat,
@@ -315,7 +371,6 @@ class DMGoutput_Bulk_Calculator:
         tera_type=None,
         is_sub_call=False,
     ):
-        # _sub 접미사를 분리하여 원본 기술명 추출
         base_move_name = self.move.name.split("_sub")[0]
 
         multi_cat = None
@@ -336,8 +391,21 @@ class DMGoutput_Bulk_Calculator:
             elif multi_cat == "multi_10":
                 hit_count = 10
 
+        atk_stats = self.pkm.stats
+        if self.move.category == "물리":
+            atk_stats[1] = atk_stat
+        elif self.move.category == "특수":
+            atk_stats[3] = atk_stat
+
+        atk_stats = self._apply_paradox_boost(self.pkm, atk_stats, weather, field)
+
+        if self.move.category == "물리":
+            atk_stat = atk_stats[1]
+        elif self.move.category == "특수":
+            atk_stat = atk_stats[3]
+
         if self.move.name == "바디프레스":
-            atk_stat = self.pkm.stats[2]
+            atk_stat = atk_stats[2]
 
         is_always_crit = base_move_name in ALWAYS_CRIT_MOVES
 
@@ -425,7 +493,6 @@ class DMGoutput_Bulk_Calculator:
         if self.pkm.item == "생명의구슬":
             dmg_output = dmg_output * 1.3
 
-        # 일반 연속기(연속펀치 등 위력이 고정인 경우)에서만 hit_count 곱하기 적용 (base_move_name 기준)
         if multi_cat and not is_sub_call and base_move_name not in ["트리플킥", "트리플악셀"]:
             dmg_output = dmg_output * hit_count
 
@@ -433,7 +500,7 @@ class DMGoutput_Bulk_Calculator:
             return np.floor(dmg_output).astype(np.int64)
         return int(np.floor(dmg_output))
 
-    def calculate_bulk(self, H, B, D, weather, status, rank_b=0):
+    def calculate_bulk(self, H, B, D, weather, field, status, rank_b=0):
         def has_status(status):
             return bool(status)
 
@@ -444,6 +511,13 @@ class DMGoutput_Bulk_Calculator:
                 return (base_stat * (2 + rank)) // 2
             else:
                 return (base_stat * 2) // (2 + abs(rank))
+            
+        pkm_stats = self.pkm.stats
+        pkm_stats[2] = B
+        pkm_stats[4] = D
+        pkm_stats = self._apply_paradox_boost(self.pkm, pkm_stats, weather, field)
+        B = pkm_stats[2]
+        D = pkm_stats[4]
 
         rank_b_ = rank_b if self.move.category == "물리" else 0
         rank_d = rank_b if self.move.category == "특수" else 0
@@ -457,7 +531,7 @@ class DMGoutput_Bulk_Calculator:
             ranked_D = (ranked_D * 3) // 2
 
         if self.pkm.item == "돌격조끼":
-            ranked_D = (ranked_D * 6144) // 4096
+            ranked_D = (ranked_D * 3) // 2
 
         if self.pkm.ability == "이상한비늘" and has_status(status):
             ranked_B = (ranked_B * 3) // 2

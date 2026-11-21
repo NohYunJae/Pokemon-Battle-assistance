@@ -784,7 +784,7 @@ class CalculatorView(ctk.CTkFrame):
                 dmg_output_calc = DMGoutput_Bulk_Calculator(attacker, move)
                 dmg_output = dmg_output_calc.calculate_dmg_output(atk_stat, field, weather, atk_status, rank_a)
             bulk_calc = DMGoutput_Bulk_Calculator(defender, move)
-            phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, def_status, rank_b)
+            phys_bulk, spec_bulk = bulk_calc.calculate_bulk(def_hp, def_b, def_d, weather, field, def_status, rank_b)
 
             min_dmg, max_dmg = damages[0], damages[-1]
             min_pct, max_pct = percentages[0], percentages[-1]
