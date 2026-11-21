@@ -38,9 +38,8 @@ class CriticalHitManager:
             crit_stage += 1
         if self.attacker.ability == "대운":
             crit_stage += 1
-        if self.attacker.name in ["파오리","가라르파오리","창파나이트"]:
-            if self.attacker.item == "대파":
-                crit_stage += 2
+        if self.attacker.name in ["파오리", "가라르파오리", "창파나이트"] and self.attacker.item == "대파":
+            crit_stage += 2
 
         if crit_stage >= 3:
             return True
@@ -54,49 +53,63 @@ class Power_modifiers:
         self.move = move
 
     def ability_mods(self, atk_stat, status, move_type=None, power=None):
-        def has_status(status):
-            return bool(status)
-
         move_type = move_type if move_type is not None else self.move.type
         power = power if power is not None else self.move.power
         ability_mod = 1.0
+        atk_stat_mod_num = None
+        ability = self.pkm.ability
 
-        if self.pkm.ability == "단단한발톱" and self.move.contact:
+        if ability == "단단한발톱" and self.move.contact:
             ability_mod = 1.3
-        elif self.pkm.ability == "메가런처" and self.move.name in MEGA_LAUNCHER_MOVES:
+
+        elif ability == "메가런처" and self.move.name in MEGA_LAUNCHER_MOVES:
             ability_mod = 1.5
-        elif self.pkm.ability == "옹골찬턱" and self.move.name in STRONG_JAW_MOVES:
+
+        elif ability == "옹골찬턱" and self.move.name in STRONG_JAW_MOVES:
             ability_mod = 1.5
-        elif self.pkm.ability == "예리함" and self.move.name in SHARP_MOVES:
+
+        elif ability == "예리함" and self.move.name in SHARP_MOVES:
             ability_mod = 1.5
-        elif self.pkm.ability == "스카이스킨" and move_type == "노말":
+
+        elif ability == "스카이스킨" and move_type == "노말":
             move_type = "비행"
             ability_mod = 1.2
-        elif self.pkm.ability == "페어리스킨" and move_type == "노말":
+
+        elif ability == "페어리스킨" and move_type == "노말":
             move_type = "페어리"
             ability_mod = 1.2
-        elif self.pkm.ability == "프리즈스킨" and move_type == "노말":
+
+        elif ability == "프리즈스킨" and move_type == "노말":
             move_type = "얼음"
             ability_mod = 1.2
-        elif self.pkm.ability == "일렉트릭스킨" and move_type == "노말":
+
+        elif ability == "일렉트릭스킨" and move_type == "노말":
             move_type = "전기"
             ability_mod = 1.2
-        elif self.pkm.ability == "드래곤스킨" and move_type == "노말":
+
+        elif ability == "드래곤스킨" and move_type == "노말":
             move_type = "드래곤"
             ability_mod = 1.2
-        elif self.pkm.ability == "테크니션" and power <= 60:
-            ability_mod = 1.5
-        elif self.pkm.ability == "철주먹" and self.move.name in IRON_FIST_MOVES:
-            ability_mod = 1.2
-        elif self.pkm.ability == "천하장사" and self.move.category == "물리":
-            ability_mod = 2.0
-        elif self.pkm.ability == "근성" and has_status(status) and self.move.category == "물리":
-            atk_stat = (atk_stat * 6144) // 4096
 
-        if self.move.name == "객기" and has_status(status):
+        elif ability == "테크니션" and power <= 60:
+            ability_mod = 1.5
+
+        elif ability == "철주먹" and self.move.name in IRON_FIST_MOVES:
+            ability_mod = 1.2
+
+        elif ability == "천하장사" and self.move.category == "물리":
+            ability_mod = 2.0
+
+        elif ability == "근성" and bool(status) and self.move.category == "물리":
+            atk_stat_mod_num = 6144
+
+        elif ability in ["진홍빛고동", "하드론엔진"]:
+            atk_stat_mod_num = 5461
+
+        if self.move.name == "객기" and bool(status):
             power = 140
 
-        return ability_mod, move_type, atk_stat, power
+        return ability_mod, move_type, atk_stat, power, atk_stat_mod_num
 
     def field_mods(self, field, move_type=None, power=None):
         move_type = move_type if move_type is not None else self.move.type
@@ -136,7 +149,7 @@ class Power_modifiers:
                 power = 100
             if move_type == "전기":
                 field_mod = 1.3
-
+                
         elif field == "사이코필드":
             if self.move.name == "대지의파동":
                 move_type = "에스퍼"
@@ -151,17 +164,14 @@ class Power_modifiers:
     def item_mods(self, atk_stat, move_type=None):
         move_type = move_type if move_type is not None else self.move.type
 
+        atk_stat_mod_num = None
         if self.pkm.item == "구애머리띠" and self.move.category == "물리":
-            atk_stat = (atk_stat * 6144) // 4096
+            atk_stat_mod_num = 6144
         elif self.pkm.item == "구애안경" and self.move.category == "특수":
-            atk_stat = (atk_stat * 6144) // 4096
+            atk_stat_mod_num = 6144
 
-        if TYPE_BOOST_ITEMS.get(self.pkm.item) == move_type:
-            item_power_mod = 1.2
-        else:
-            item_power_mod = 1.0
-
-        return item_power_mod, atk_stat
+        item_power_mod = 1.2 if TYPE_BOOST_ITEMS.get(self.pkm.item) == move_type else 1.0
+        return item_power_mod, atk_stat, atk_stat_mod_num
 
 
 class Bulk_modifiers:
@@ -171,33 +181,30 @@ class Bulk_modifiers:
         self.move = move
 
     def ability_mods(self, status, def_stat, move_type=None):
-        def has_status(status):
-            return bool(status)
-
         move_type = move_type if move_type is not None else self.move.type
         ability_mod = 1.0
+        def_stat_mod_num = None
+        ability = self.defender.ability
 
-        if self.defender.ability == "두꺼운지방" and move_type in ["얼음", "불꽃"]:
+        if ability == "두꺼운지방" and move_type in ["얼음", "불꽃"]:
             ability_mod = 0.5
-        elif self.defender.ability == "타오르는불꽃" and move_type == "불꽃":
-            ability_mod = 0.0
-        elif self.defender.ability == "부유" and move_type == "땅":
-            ability_mod = 0.0
-        elif self.defender.ability == "저수" and move_type == "물":
-            ability_mod = 0.0
-        elif (
-            self.defender.ability == "이상한비늘"
-            and has_status(status)
-            and self.move.category == "물리"
-        ):
-            def_stat = (def_stat * 6144) // 4096
+        elif ability in ["타오르는불꽃", "부유", "저수"]:
+            if (
+                (ability == "타오르는불꽃" and move_type == "불꽃")
+                or (ability == "부유" and move_type == "땅")
+                or (ability == "저수" and move_type == "물")
+            ):
+                ability_mod = 0.0
+        elif ability == "이상한비늘" and bool(status) and self.move.category == "물리":
+            def_stat_mod_num = 6144
 
-        return ability_mod, def_stat
+        return ability_mod, def_stat, def_stat_mod_num
 
     def item_mods(self, def_stat):
+        def_stat_mod_num = None
         if self.defender.item == "돌격조끼" and self.move.category == "특수":
-            def_stat = (def_stat * 6144) // 4096
+            def_stat_mod_num = 6144
         elif self.defender.item == "진화의휘석":
-            def_stat = (def_stat * 6144) // 4096
+            def_stat_mod_num = 6144
 
-        return def_stat
+        return def_stat, def_stat_mod_num
