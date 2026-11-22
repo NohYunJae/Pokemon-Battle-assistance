@@ -206,7 +206,8 @@ class SpdCalculatorView(ctk.CTkFrame):
 
         self._is_initialized = False
 
-        self.grid_columnconfigure(0, weight=0)
+        # 왼쪽 박스는 내부 입력칸 크기에 맞춰 넓어지고, 오른쪽 박스는 남은 공간을 차지하도록 설정
+        self.grid_columnconfigure(0, weight=0, minsize=280)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -217,7 +218,7 @@ class SpdCalculatorView(ctk.CTkFrame):
             border_width=1.5,
             border_color="#000000",
         )
-        self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(5, 3), pady=5)
+        self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(5, 4), pady=5)
 
         self.right_frame = ctk.CTkFrame(
             self,
@@ -226,17 +227,17 @@ class SpdCalculatorView(ctk.CTkFrame):
             border_width=1.5,
             border_color="#000000",
         )
-        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(3, 5), pady=5)
+        self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(4, 5), pady=5)
 
         title_label = ctk.CTkLabel(
             self.left_frame,
             text="스피드 비교 계산기",
             font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
         )
-        title_label.pack(anchor="w", padx=12, pady=(8, 4))
+        title_label.pack(anchor="w", padx=14, pady=(10, 6))
 
         input_container = ctk.CTkFrame(self.left_frame, fg_color="transparent")
-        input_container.pack(fill="both", expand=False, padx=12, pady=2)
+        input_container.pack(fill="both", expand=False, padx=14, pady=2)
 
         # 포켓몬 A 설정
         pkm1_label = ctk.CTkLabel(
@@ -244,7 +245,7 @@ class SpdCalculatorView(ctk.CTkFrame):
             text="[포켓몬 A 설정]",
             font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
         )
-        pkm1_label.pack(anchor="w", pady=(1, 1))
+        pkm1_label.pack(anchor="w", pady=(1, 2))
 
         self.pkm1_name_combo = self._create_autocomplete_row(
             input_container, "포켓몬:", [], command=lambda x: self.run_calculation()
@@ -279,7 +280,7 @@ class SpdCalculatorView(ctk.CTkFrame):
             text="[포켓몬 B 설정]",
             font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
         )
-        pkm2_label.pack(anchor="w", pady=(6, 1))
+        pkm2_label.pack(anchor="w", pady=(8, 2))
 
         self.pkm2_name_combo = self._create_autocomplete_row(
             input_container, "포켓몬:", [], command=lambda x: self.run_calculation()
@@ -314,7 +315,7 @@ class SpdCalculatorView(ctk.CTkFrame):
             text="[환경 설정]",
             font=ctk.CTkFont(family=FONT_FAMILY, weight="bold", size=12),
         )
-        env_label.pack(anchor="w", pady=(6, 1))
+        env_label.pack(anchor="w", pady=(8, 2))
 
         self.weather_combo = self._create_combo_row(
             input_container,
@@ -398,17 +399,17 @@ class SpdCalculatorView(ctk.CTkFrame):
 
     def _create_input_row(self, parent, label_text, default_value="", command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=1)
+        frame.pack(fill="x", pady=1.5)
         lbl = ctk.CTkLabel(
             frame,
             text=label_text,
-            width=80,
+            width=85,
             anchor="w",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
         )
         lbl.pack(side="left")
         entry = ctk.CTkEntry(
-            frame, width=120, height=20, font=ctk.CTkFont(family=FONT_FAMILY, size=11)
+            frame, width=155, height=22, font=ctk.CTkFont(family=FONT_FAMILY, size=11)
         )
         entry.pack(side="left")
         entry.insert(0, default_value)
@@ -421,12 +422,12 @@ class SpdCalculatorView(ctk.CTkFrame):
         self, parent, label_var, default_sp="32", default_rank="0", command=None
     ):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=1)
+        frame.pack(fill="x", pady=1.5)
 
         lbl = ctk.CTkLabel(
             frame,
             textvariable=label_var,
-            width=80,
+            width=85,
             anchor="w",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
         )
@@ -451,8 +452,8 @@ class SpdCalculatorView(ctk.CTkFrame):
 
         sp_entry = ctk.CTkEntry(
             right_sub_frame,
-            width=45,
-            height=19,
+            width=52,
+            height=21,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             justify="center",
         )
@@ -462,14 +463,14 @@ class SpdCalculatorView(ctk.CTkFrame):
         if command:
             sp_entry.bind("<KeyRelease>", command)
 
-        sp_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
-        sp_btn_frame.pack(side="left", padx=(0, 6))
+        sp_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=15)
+        sp_btn_frame.pack(side="left", padx=(0, 8))
 
         up_btn_s = ctk.CTkButton(
             sp_btn_frame,
             text="▲",
-            width=14,
-            height=9,
+            width=15,
+            height=10,
             font=ctk.CTkFont(family=FONT_FAMILY, size=7),
             fg_color="#E2E8F0",
             text_color="#334155",
@@ -480,8 +481,8 @@ class SpdCalculatorView(ctk.CTkFrame):
         down_btn_s = ctk.CTkButton(
             sp_btn_frame,
             text="▼",
-            width=14,
-            height=9,
+            width=15,
+            height=10,
             font=ctk.CTkFont(family=FONT_FAMILY, size=7),
             fg_color="#E2E8F0",
             text_color="#334155",
@@ -496,12 +497,12 @@ class SpdCalculatorView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             anchor="e",
         )
-        rank_lbl.pack(side="left", padx=(0, 2))
+        rank_lbl.pack(side="left", padx=(0, 3))
 
         rank_entry = ctk.CTkEntry(
             right_sub_frame,
-            width=35,
-            height=19,
+            width=40,
+            height=21,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             justify="center",
         )
@@ -511,14 +512,14 @@ class SpdCalculatorView(ctk.CTkFrame):
         if command:
             rank_entry.bind("<KeyRelease>", command)
 
-        rank_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=14)
+        rank_btn_frame = ctk.CTkFrame(right_sub_frame, fg_color="transparent", width=15)
         rank_btn_frame.pack(side="left")
 
         up_btn_r = ctk.CTkButton(
             rank_btn_frame,
             text="▲",
-            width=14,
-            height=9,
+            width=15,
+            height=10,
             font=ctk.CTkFont(family=FONT_FAMILY, size=7),
             fg_color="#E2E8F0",
             text_color="#334155",
@@ -529,8 +530,8 @@ class SpdCalculatorView(ctk.CTkFrame):
         down_btn_r = ctk.CTkButton(
             rank_btn_frame,
             text="▼",
-            width=14,
-            height=9,
+            width=15,
+            height=10,
             font=ctk.CTkFont(family=FONT_FAMILY, size=7),
             fg_color="#E2E8F0",
             text_color="#334155",
@@ -543,11 +544,11 @@ class SpdCalculatorView(ctk.CTkFrame):
 
     def _create_combo_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=1)
+        frame.pack(fill="x", pady=1.5)
         lbl = ctk.CTkLabel(
             frame,
             text=label_text,
-            width=80,
+            width=85,
             anchor="w",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
         )
@@ -555,8 +556,8 @@ class SpdCalculatorView(ctk.CTkFrame):
         combo = ctk.CTkComboBox(
             frame,
             values=values,
-            width=120,
-            height=20,
+            width=155,
+            height=22,
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
             command=command,
         )
@@ -568,18 +569,18 @@ class SpdCalculatorView(ctk.CTkFrame):
 
     def _create_autocomplete_row(self, parent, label_text, values, command=None):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=1)
+        frame.pack(fill="x", pady=1.5)
         lbl = ctk.CTkLabel(
             frame,
             text=label_text,
-            width=80,
+            width=85,
             anchor="w",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11),
         )
         lbl.pack(side="left")
 
         ac_box = AutocompleteCombobox(frame, values=values, command=command)
-        ac_box.entry.configure(width=120, height=20)
+        ac_box.entry.configure(width=155, height=22)
         ac_box.pack(side="left")
         if values:
             ac_box.set(values[0])
